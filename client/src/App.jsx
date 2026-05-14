@@ -1,0 +1,123 @@
+import { useState, useEffect, useRef } from 'react';
+import MainMenu from './components/MainMenu.jsx';
+import GameScreen from './components/GameScreen.jsx';
+import ResultScreen from './components/ResultScreen.jsx';
+
+// ── 대각선 픽셀 캐릭터 배경 ──────────────────────────────
+function PatternBackground() {
+  const ref = useRef(null);
+
+  useEffect(() => {
+    const canvas = ref.current;
+    if (!canvas) return;
+
+    const W = window.innerWidth;
+    const H = window.innerHeight;
+    canvas.width  = W;
+    canvas.height = H;
+    const ctx = canvas.getContext('2d');
+    ctx.imageSmoothingEnabled = false;
+
+    // 베이스 배경색
+    ctx.fillStyle = '#0f1a50';
+    ctx.fillRect(0, 0, W, H);
+
+    // 스프라이트시트 2장 로드
+    const dungeon = new Image(); // spacing 1px → col*17, row*17
+    const addon   = new Image(); // spacing 0px → col*16, row*16
+    let doneCount = 0;
+
+    const draw = () => {
+      // 사용할 스프라이트 목록
+      // dungeon: 검사(7,3) 궁수(7,1) 기사(8,0) 마법사(7,0)
+      // addon:   몬스터 row8~9
+      const SPRITES = [
+        { img: dungeon, sx: 3*17, sy: 7*17 },  // 검사
+        { img: addon,   sx: 0*16, sy: 8*16 },  // 몬스터A
+        { img: dungeon, sx: 1*17, sy: 7*17 },  // 궁수
+        { img: addon,   sx: 3*16, sy: 8*16 },  // 몬스터B
+        { img: dungeon, sx: 0*17, sy: 8*17 },  // 기사
+        { img: addon,   sx: 1*16, sy: 9*16 },  // 몬스터C
+        { img: dungeon, sx: 0*17, sy: 7*17 },  // 마법사
+        { img: addon,   sx: 4*16, sy: 9*16 },  // 몬스터D
+      ];
+
+      const SCALE   = 3;          // 16px → 48px
+      const SIZE    = 16 * SCALE;
+      const CELL_W  = 120;
+      const CELL_H  = 104;
+
+      ctx.globalAlpha = 0.10;
+
+      const rows = Math.ceil(H / CELL_H) + 2;
+      const cols = Math.ceil(W / CELL_W) + 3;
+
+      for (let row = -1; row < rows; row++) {
+        const xOff = (row % 2 !== 0) ? CELL_W / 2 : 0;
+        for (let col = -1; col < cols; col++) {
+          const x = col * CELL_W + xOff;
+          const y = row * CELL_H;
+          const s = SPRITES[Math.abs((row * 3 + col) % SPRITES.length)];
+          ctx.drawImage(s.img, s.sx, s.sy, 16, 16, x - SIZE / 2, y - SIZE / 2, SIZE, SIZE);
+        }
+      }
+    };
+
+    const onLoad = () => { doneCount++; if (doneCount >= 2) draw(); };
+    dungeon.onload  = onLoad;
+    dungeon.onerror = onLoad;
+    addon.onload    = onLoad;
+    addon.onerror   = onLoad;
+
+    dungeon.src = '/assets/sprites/tiny-creatures/Tilemap/Kenney_tiny_dungeon.png';
+    addon.src   = '/assets/sprites/TinyPackAddOn/Sprites-16x16.png';
+  }, []);
+
+  return (
+    <canvas
+      ref={ref}
+      style={{
+        position: 'fixed', top: 0, left: 0,
+        width: '100%', height: '100%',
+        pointerEvents: 'none',
+        zIndex: 0,
+        imageRendering: 'pixelated',
+      }}
+    />
+  );
+}
+
+// ────────────────────────────────────────────────────────
+export default function App() {
+  const [screen, setScreen] = useState('menu');
+  const [gameKey, setGameKey] = useState(0);
+  const [result, setResult]   = useState(null);
+
+  const goGame   = () => { setGameKey(k => k + 1); setScreen('game'); };
+  const handleEnd = (r) => { setResult(r); setScreen('result'); };
+
+  return (
+    <div style={{
+      width: '100vw', minHeight: '100vh',
+      background: '#0f1a50',
+      overflowX: 'hidden',
+      overflowY: screen === 'menu' ? 'auto' : 'hidden',
+    }}>
+      {/* 항상 배경 패턴 표시 */}
+      <PatternBackground />
+
+      <div style={{
+        display: 'flex',
+        alignItems: screen === 'game' ? 'flex-start' : 'center',
+        justifyContent: 'center',
+        minHeight: '100vh',
+        position: 'relative',
+        zIndex: 1,
+      }}>
+        {screen === 'menu'   && <MainMenu onStart={goGame} />}
+        {screen === 'game'   && <GameScreen key={gameKey} onEnd={handleEnd} />}
+        {screen === 'result' && <ResultScreen result={result} onReplay={goGame} onMenu={() => setScreen('menu')} />}
+      </div>
+    </div>
+  );
+}

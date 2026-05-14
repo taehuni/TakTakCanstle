@@ -1,0 +1,85 @@
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body, #root {
+  width: 100%; min-height: 100%;
+  background: #0e1848;
+  color: #e8e8f0;
+  font-family: 'Noto Sans KR', 'Malgun Gothic', sans-serif;
+  user-select: none;
+}
+
+button { font-family: inherit; }
+
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: #0a1235; }
+::-webkit-scrollbar-thumb { background: #1d4a8a; border-radius: 2px; }
+
+/* ── 애니메이션 ─────────────────────────────────────── */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(18px); }
+  to   { opacity: 1; transform: translateY(0);    }
+}
+@keyframes pulseGlow {
+  0%,100% { box-shadow: 0 0 18px rgba(124,92,191,0.35), 0 4px 20px rgba(0,0,0,0.5); }
+  50%     { box-shadow: 0 0 36px rgba(124,92,191,0.7),  0 4px 24px rgba(0,0,0,0.6); }
+}
+@keyframes shimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position:  200% center; }
+}
+@keyframes winPop {
+  0%   { transform: scale(0.7); opacity: 0; }
+  70%  { transform: scale(1.08); }
+  100% { transform: scale(1);   opacity: 1; }
+}
+
+/* ── 히어로 버튼 hover ─────────────────────────────── */
+.hero-play:hover  { transform: scale(1.04); box-shadow: 0 6px 40px rgba(251,191,36,0.6) !important; }
+.hero-play:active { transform: scale(0.97); }
+.cta-btn:hover    { transform: scale(1.04); box-shadow: 0 10px 50px rgba(251,191,36,0.55) !important; }
+.cta-btn:active   { transform: scale(0.97); }
+
+/* ── 공통 버튼 ─────────────────────────────────────── */
+.btn-primary {
+  padding: 15px 0; width: 260px;
+  background: linear-gradient(135deg, #7c5cbf 0%, #5b3e9e 100%);
+  border: 1px solid #9b7fd4; border-radius: 10px;
+  color: #fff; font-size: 19px; font-weight: 900;
+  cursor: pointer; letter-spacing: 3px;
+  animation: pulseGlow 2.8s ease-in-out infinite;
+  transition: transform 0.12s;
+}
+.btn-primary:hover  { transform: scale(1.04); }
+.btn-primary:active { transform: scale(0.97); }
+
+.btn-secondary {
+  padding: 13px 0; width: 260px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.07); border-radius: 10px;
+  color: #2a2a3a; font-size: 15px; cursor: not-allowed; letter-spacing: 1px;
+}
+
+.btn-action {
+  padding: 13px 36px;
+  background: linear-gradient(135deg, #7c5cbf, #5b3e9e);
+  border: 1px solid #9b7fd4; border-radius: 10px;
+  color: #fff; font-size: 16px; font-weight: 700;
+  cursor: pointer; transition: transform 0.1s, box-shadow 0.2s;
+}
+.btn-action:hover  { transform: scale(1.04); box-shadow: 0 0 24px rgba(124,92,191,0.45); }
+.btn-action:active { transform: scale(0.97); }
+
+.btn-ghost {
+  padding: 13px 36px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.1); border-radius: 10px;
+  color: #555; font-size: 16px; cursor: pointer;
+  transition: border-color 0.2s, color 0.2s;
+}
+.btn-ghost:hover { border-color: rgba(255,255,255,0.22); color: #888; }
+
+.anim-1 { animation: fadeInUp 0.45s ease-out 0.05s both; }
+.anim-2 { animation: fadeInUp 0.45s ease-out 0.15s both; }
+.anim-3 { animation: fadeInUp 0.45s ease-out 0.25s both; }
+.anim-4 { animation: fadeInUp 0.45s ease-out 0.35s both; }
+.anim-win { animation: winPop 0.5s cubic-bezier(.34,1.56,.64,1) both; }
