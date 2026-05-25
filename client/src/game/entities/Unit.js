@@ -1,5 +1,5 @@
 import { UNIT_DEFS } from '../../data/units.js';
-import { calcDamage } from '../../data/combat.js';
+import { calcDamage, roleMultiplier } from '../../data/combat.js';
 
 const RANGED_THRESHOLD = 40;
 
@@ -19,9 +19,10 @@ export class Unit {
     this.walkBob        = 0;
 
     // 버프/디버프
-    this.speedBuff = 1;  // aura 등으로 설정
+    this.speedBuff = 1;
     this.atkBuff   = 1;
-    this.debuffs   = []; // [{ type:'atk_mult', mult:0.6, timer:5, source:'shaman' }]
+    this.debuffs   = [];
+    this.attackAnimTimer = 0; // [{ type:'atk_mult', mult:0.6, timer:5, source:'shaman' }]
 
     // ── ability 상태 초기화 ──────────────────────
     if (this.ability === 'phase') {
@@ -39,6 +40,12 @@ export class Unit {
     if (this.ability === 'charge') {
       this.hasCharged = false;
     }
+    if (this.ability === 'poison') {
+      // 독 DoT 틱은 debuffs로 관리
+    }
+    if (this.ability === 'devour') {
+      // 처치 시 HP 회복 — doAttack에서 처리
+    }
   }
 
   // ── 유효 공격력 (버프/디버프/rage 반영) ─────────
@@ -55,6 +62,9 @@ export class Unit {
   get effectiveSpeed() {
     let spd = this.speed * this.speedBuff;
     if (this.ability === 'rage' && this.enraged) spd *= (this.abilityData?.spdMult || 1.5);
+    for (const d of this.debuffs) {
+      if (d.type === 'spd_mult') spd *= d.mult;
+    }
     return spd;
   }
 
@@ -103,10 +113,38 @@ export class Unit {
       }
     }
 
+    // ── regen: HP 재생 ───────────────────────────
+    if (this.ability === 'regen') {
+      this.hp = Math.min(this.maxHp, this.hp + (this.abilityData?.regenRate || 3) * dt);
+    }
+
+    // ── 독 DoT 틱 처리 (0.5초마다) ──────────────
+    for (const d of this.debuffs) {
+      if (d.type === 'poison_dot') {
+        d.tickTimer = (d.tickTimer ?? 0.5) - dt;
+        if (d.tickTimer <= 0) {
+          d.tickTimer = 0.5;
+          const poisonDmg = calcDamage(d.dmg, 'poison', this.def || 0, this.mdef || 0, this.traits || []);
+          this.hp -= poisonDmg;
+        }
+      }
+    }
+
     // ── 디버프 타이머 감소 ────────────────────────
     this.debuffs = this.debuffs.filter(d => (d.timer -= dt) > 0);
 
+    // ── 매혹: 인간 진영이 고양이에 홀려 행동 불가 ──
+    if (this.debuffs.some(d => d.type === 'charmed')) {
+      this.state = 'idle';
+      this.animTimer += dt;
+      return;
+    }
+
     this.animTimer += dt;
+    if (this.attackAnimTimer > 0) {
+      this.attackAnimTimer -= dt;
+      this.state = 'attack';
+    }
     this.walkBob = this.state === 'walk' ? Math.sin(this.animTimer * 12) * 2 : 0;
     if (this.attackCooldown > 0) this.attackCooldown -= dt;
 
@@ -160,26 +198,31 @@ export class Unit {
     }
 
     if (unitTarget && minDist <= this.range) {
-      this.state = 'attack';
       if (this.attackCooldown <= 0) {
         this.attackCooldown = this.cooldown;
-        // phase: 첫 공격 시 유체화 해제
-        if (this.phased) {
-          this.phased = true; // still phased until actual contact
-        }
+        this.attackAnimTimer = Math.min(0.4, this.cooldown * 0.35);
+        this.state = 'attack';
         this.doAttack(unitTarget, null, null, battle);
+      } else if (this.attackAnimTimer <= 0) {
+        this.state = 'idle';
       }
     } else if (buildTarget) {
-      this.state = 'attack';
       if (this.attackCooldown <= 0) {
         this.attackCooldown = this.cooldown;
+        this.attackAnimTimer = Math.min(0.4, this.cooldown * 0.35);
+        this.state = 'attack';
         this.doAttack(null, null, buildTarget, battle);
+      } else if (this.attackAnimTimer <= 0) {
+        this.state = 'idle';
       }
     } else if (Math.abs(this.x - castleX) <= this.range) {
-      this.state = 'attack';
       if (this.attackCooldown <= 0) {
         this.attackCooldown = this.cooldown;
+        this.attackAnimTimer = Math.min(0.4, this.cooldown * 0.35);
+        this.state = 'attack';
         this.doAttack(null, castle, null, battle, castleX);
+      } else if (this.attackAnimTimer <= 0) {
+        this.state = 'idle';
       }
     } else {
       this.state = 'walk';
@@ -246,17 +289,55 @@ export class Unit {
 
     const applyHit = (target, dmgMult = 1) => {
       if (!target || target.dead) return 0;
-      const raw = Math.floor(atkOverride * dmgMult);
+      const roleMult = roleMultiplier(this.role, target.role);
+      const raw = Math.floor(atkOverride * dmgMult * roleMult);
       const d   = calcDamage(raw, this.dmgType, target.def || 0, target.mdef || 0, target.traits || []);
       const actual = target.takeDamage ? target.takeDamage(d, this.dmgType) : d;
       if (target.hp !== undefined) target.hp -= (target.takeDamage ? 0 : actual);
       if (target.hp <= 0 && !target.dead) target.dead = true;
 
-      // life_steal
+      // life_steal — holy 디버프(life_steal_reduce) 적용
       if (this.ability === 'life_steal' && actual > 0) {
-        const heal = Math.floor(actual * (this.abilityData?.stealRate || 0.35));
-        this.hp = Math.min(this.maxHp, this.hp + heal);
+        let stealRate = this.abilityData?.stealRate || 0.35;
+        const reduceDebuff = this.debuffs?.find(d => d.type === 'life_steal_reduce');
+        if (reduceDebuff) stealRate *= reduceDebuff.mult;
+        const heal = Math.floor(actual * stealRate);
+        if (heal > 0) {
+          this.hp = Math.min(this.maxHp, this.hp + heal);
+          battle.effects.push({ x: this.x, y: this.y - 35, type: 'heart', timer: 0.6, maxTimer: 0.6 });
+        }
       }
+
+      // poison: 적중 시 독 DoT 부여
+      if (this.ability === 'poison' && target && !target.dead) {
+        target.debuffs = target.debuffs || [];
+        const existing = target.debuffs.find(d => d.source === this.unitId + '_poison');
+        if (existing) {
+          existing.timer = this.abilityData?.poisonDuration || 4;
+        } else {
+          target.debuffs.push({
+            type: 'poison_dot',
+            dmg: Math.ceil(this.attack * (this.abilityData?.poisonRate || 0.25)),
+            timer: this.abilityData?.poisonDuration || 4,
+            tickTimer: 0.5,
+            source: this.unitId + '_poison',
+          });
+        }
+        battle.effects.push({ x: target.x, y: target.y - 20, type: 'poison', timer: 0.5, maxTimer: 0.5 });
+      }
+
+      // holy: 적중 시 life_steal 효율 감소 디버프 (사제/성기사 → 뱀파이어/흑기사 카운터)
+      if (this.dmgType === 'holy' && target.ability === 'life_steal' && !target.dead) {
+        target.debuffs = target.debuffs || [];
+        const existing = target.debuffs.find(d => d.type === 'life_steal_reduce');
+        if (existing) {
+          existing.timer = 4;
+        } else {
+          target.debuffs.push({ type: 'life_steal_reduce', mult: 0.4, timer: 4, source: 'holy' });
+        }
+        battle.effects.push({ x: target.x, y: target.y - 20, type: 'magic', timer: 0.5, maxTimer: 0.5 });
+      }
+
       return actual;
     };
 

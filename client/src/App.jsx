@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import MainMenu from './components/MainMenu.jsx';
 import GameScreen from './components/GameScreen.jsx';
 import ResultScreen from './components/ResultScreen.jsx';
+import MatchmakingScreen from './components/MatchmakingScreen.jsx';
 
 // ── 대각선 픽셀 캐릭터 배경 ──────────────────────────────
 function PatternBackground() {
@@ -89,12 +90,15 @@ function PatternBackground() {
 
 // ────────────────────────────────────────────────────────
 export default function App() {
-  const [screen, setScreen] = useState('menu');
-  const [gameKey, setGameKey] = useState(0);
-  const [result, setResult]   = useState(null);
+  const [screen, setScreen]     = useState('menu');
+  const [gameKey, setGameKey]   = useState(0);
+  const [result, setResult]     = useState(null);
+  const [multiInfo, setMultiInfo] = useState(null); // { socket, side }
 
-  const goGame   = () => { setGameKey(k => k + 1); setScreen('game'); };
-  const handleEnd = (r) => { setResult(r); setScreen('result'); };
+  const goGame      = () => { setGameKey(k => k + 1); setScreen('game'); };
+  const goMulti     = () => { setScreen('matchmaking'); };
+  const onMatched   = (info) => { setMultiInfo(info); setGameKey(k => k + 1); setScreen('game'); };
+  const handleEnd   = (r) => { setResult(r); setScreen('result'); };
 
   return (
     <div style={{
@@ -114,9 +118,10 @@ export default function App() {
         position: 'relative',
         zIndex: 1,
       }}>
-        {screen === 'menu'   && <MainMenu onStart={goGame} />}
-        {screen === 'game'   && <GameScreen key={gameKey} onEnd={handleEnd} />}
-        {screen === 'result' && <ResultScreen result={result} onReplay={goGame} onMenu={() => setScreen('menu')} />}
+        {screen === 'menu'        && <MainMenu onStart={goGame} onMulti={goMulti} />}
+        {screen === 'matchmaking' && <MatchmakingScreen onMatched={onMatched} onBack={() => setScreen('menu')} />}
+        {screen === 'game'        && <GameScreen key={gameKey} onEnd={handleEnd} multiInfo={multiInfo} />}
+        {screen === 'result'      && <ResultScreen result={result} onReplay={goGame} onMenu={() => setScreen('menu')} />}
       </div>
     </div>
   );

@@ -1,19 +1,37 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { GameEngine } from '../game/GameEngine.js';
-import { WEAPON_WORDS } from '../data/words.js';
-import { UNIT_DEFS } from '../data/units.js';
+import { WEAPON_WORDS, BUILD_WORDS, EASTER_WORDS } from '../data/words.js';
+import { UNIT_DEFS, BUILDING_DEFS } from '../data/units.js';
 import { SHEETS } from '../game/SpriteCache.js';
 
 const W = 1200, H = 500;
 
 const UNIT_META = {
-  swordsman: { label: '검사',   color: '#60a5fa' },
-  archer:    { label: '궁수',   color: '#4ade80' },
-  knight:    { label: '기사',   color: '#fbbf24' },
-  wizard:    { label: '마법사',  color: '#c084fc' },
-  catapult:  { label: '투석기', color: '#fb923c' },
+  swordsman:   { label: '검사',   color: '#60a5fa' },
+  archer:      { label: '궁수',   color: '#4ade80' },
+  knight:      { label: '기사',   color: '#fbbf24' },
+  wizard:      { label: '마법사', color: '#c084fc' },
+  paladin:     { label: '성기사', color: '#fde68a' },
+  rogue:       { label: '도적',   color: '#94a3b8' },
+  crossbowman: { label: '석궁병', color: '#7dd3fc' },
+  skeleton:    { label: '해골',   color: '#e2e2e2' },
+  ghost:       { label: '유령',   color: '#a5f3fc' },
+  zombie:      { label: '좀비',   color: '#86efac' },
+  vampire:     { label: '뱀파이어', color: '#f472b6' },
+  lich:        { label: '리치',   color: '#c4b5fd' },
+  death_knight:{ label: '흑기사', color: '#6366f1' },
+  bat:         { label: '박쥐',   color: '#a78bfa' },
+  goblin:      { label: '고블린', color: '#a3e635' },
+  bomber:      { label: '폭탄병', color: '#fb923c' },
+  wolf_rider:  { label: '기마병', color: '#86efac' },
+  troll:       { label: '트롤',   color: '#4ade80' },
+  orc:         { label: '오크',   color: '#4ade80' },
+  shaman:      { label: '샤먼',   color: '#818cf8' },
+  berserker:   { label: '광전사', color: '#f97316' },
+  warchief:    { label: '족장',   color: '#22c55e' },
+  cat:         { label: '고양이', color: '#f9a8d4' },
 };
-const BUILD_ORDER = ['swordsman', 'archer', 'knight', 'wizard', 'catapult'];
+const BUILD_ORDER = ['swordsman', 'archer', 'knight', 'wizard', 'cat'];
 
 // ── 유닛 스프라이트 렌더 ────────────────────────────────────────────────────
 function UnitSprite({ unitId, side = 'player', size = 36 }) {
@@ -70,6 +88,32 @@ function UnitSprite({ unitId, side = 'player', size = 36 }) {
       drawFallback();
     }
   }, [unitId, side, size]);
+  return <canvas ref={ref} width={size} height={size} style={{ imageRendering: 'pixelated', display: 'block', flexShrink: 0 }} />;
+}
+
+// ── 건물 스프라이트 ─────────────────────────────────────────────────────────
+function BuildingSprite({ buildingId, size = 32 }) {
+  const ref = useRef(null);
+  useEffect(() => {
+    const canvas = ref.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    ctx.imageSmoothingEnabled = false;
+    ctx.clearRect(0, 0, size, size);
+    const def = BUILDING_DEFS[buildingId];
+    if (!def?.tileGrid?.length) return;
+
+    // 상단 타일(가장 시각적으로 구분되는 타일)을 카드에 표시
+    const tile = def.tileGrid[0];
+    const sd = SHEETS[tile.sheet];
+    if (!sd) return;
+    const img = new Image();
+    img.onload = () => {
+      const step = sd.tileW + (sd.spacing || 0);
+      ctx.drawImage(img, tile.col * step, tile.row * step, sd.tileW, sd.tileH, 0, 0, size, size);
+    };
+    img.src = sd.src;
+  }, [buildingId, size]);
   return <canvas ref={ref} width={size} height={size} style={{ imageRendering: 'pixelated', display: 'block', flexShrink: 0 }} />;
 }
 
@@ -151,9 +195,7 @@ function BuildSidePanel({ playerArmy }) {
           </div>
         ))}
         <div style={{ ...S.unitCard, borderColor: '#94a3b830' }}>
-          <div style={{ width: 32, height: 32, background: '#1a1a2a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <span style={{ fontSize: 11, color: '#94a3b8' }}>壁</span>
-          </div>
+          <BuildingSprite buildingId="wall" size={32} />
           <div style={{ fontSize: 9, color: '#94a3b8', marginTop: 2 }}>성벽</div>
         </div>
       </div>
@@ -172,8 +214,8 @@ function BuildSidePanel({ playerArmy }) {
                 );
               }
               return (
-                <div key={i} style={{ width: 26, height: 26, border: '1px solid #94a3b830', borderRadius: 3, background: '#1a1a2a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <span style={{ fontSize: 9, color: '#94a3b8' }}>壁</span>
+                <div key={i} style={{ width: 26, height: 26, border: '1px solid #94a3b830', borderRadius: 3, overflow: 'hidden', background: '#1a1a2a' }}>
+                  <BuildingSprite buildingId={item.buildingId} size={26} />
                 </div>
               );
             })}
@@ -205,8 +247,8 @@ function BattleSidePanel({ playerUnits, playerBuildings }) {
         })}
         {playerBuildings.map((b, i) => (
           <div key={`b${i}`} style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-            <div style={{ width: 28, height: 28, background: '#1a1a2a', border: '1px solid #94a3b830', borderRadius: 3, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <span style={{ fontSize: 10, color: '#94a3b8' }}>壁</span>
+            <div style={{ width: 28, height: 28, border: '1px solid #94a3b830', borderRadius: 3, overflow: 'hidden', background: '#1a1a2a', flexShrink: 0 }}>
+              <BuildingSprite buildingId={b.buildingId} size={28} />
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 10, color: '#94a3b8', marginBottom: 3 }}>성벽</div>
@@ -220,8 +262,52 @@ function BattleSidePanel({ playerUnits, playerBuildings }) {
   );
 }
 
+// ── 단어 목록 패널 (테스트용) ───────────────────────────────────────────────
+function WordListPanel({ onClose }) {
+  const unitWords    = BUILD_WORDS.filter(w => w.type === 'unit');
+  const buildingWords = BUILD_WORDS.filter(w => w.type === 'building');
+  const section = (title, color, items) => (
+    <div style={{ marginBottom: 10 }}>
+      <div style={{ fontSize: 10, color, fontWeight: 700, letterSpacing: 1.5, marginBottom: 4 }}>{title}</div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+        {items.map((w, i) => (
+          <span key={i} style={{
+            fontSize: 12, padding: '2px 8px', borderRadius: 4,
+            background: 'rgba(255,255,255,0.05)', border: `1px solid ${color}44`,
+            color: '#ddd',
+          }}>
+            {w.word}
+            {w.unit && <span style={{ fontSize: 9, color: '#666', marginLeft: 3 }}>({UNIT_META[w.unit]?.label || w.unit})</span>}
+            {w.damage && <span style={{ fontSize: 9, color: '#666', marginLeft: 3 }}>{w.damage}</span>}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+  return (
+    <div style={{
+      position: 'fixed', top: 60, right: 10, zIndex: 999,
+      background: '#0d0a18', border: '1px solid #2a1f4a',
+      borderRadius: 8, padding: '12px 16px', width: 340,
+      maxHeight: '80vh', overflowY: 'auto',
+      boxShadow: '0 4px 24px rgba(0,0,0,0.6)',
+    }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+        <span style={{ fontSize: 11, color: '#7c3aed', fontWeight: 700, letterSpacing: 2 }}>단어 목록 (테스트)</span>
+        <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#666', cursor: 'pointer', fontSize: 14 }}>✕</button>
+      </div>
+      {section('── 유닛 소환', '#60a5fa', unitWords)}
+      {section('── 건물', '#94a3b8', buildingWords)}
+      {section('── 대유닛 공격', '#f472b6', WEAPON_WORDS.filter(w => w.target === 'unit'))}
+      {section('── 공성', '#d97706', WEAPON_WORDS.filter(w => w.target === 'building'))}
+      {section('── 대성 공격', '#fb923c', WEAPON_WORDS.filter(w => w.target === 'castle'))}
+      {section('── 이스터에그', '#a78bfa', EASTER_WORDS)}
+    </div>
+  );
+}
+
 // ── 메인 ───────────────────────────────────────────────────────────────────
-export default function GameScreen({ onEnd }) {
+export default function GameScreen({ onEnd, multiInfo }) {
   const canvasRef = useRef(null);
   const engineRef = useRef(null);
   const inputRef  = useRef(null);
@@ -236,11 +322,21 @@ export default function GameScreen({ onEnd }) {
   const [input, setInput] = useState('');
   const [feedback, setFeedback] = useState(null);
   const [strategy, setStrategyState] = useState({ wallPos: 'mid', meleeMode: 'advance', rangedMode: 'advance' });
+  const [showWordList, setShowWordList] = useState(false);
+  const [killFeed, setKillFeed] = useState([]);
+  const killIdRef = useRef(0);
 
   const setStrategy = s => { setStrategyState(s); engineRef.current?.setStrategy(s); };
 
   const onStateChange = useCallback(state => {
     if (state.phase === 'over') { onEnd(state); return; }
+    if (state.newKills?.length) {
+      const now = Date.now();
+      setKillFeed(prev => [
+        ...prev,
+        ...state.newKills.map(k => ({ id: killIdRef.current++, ...k, ts: now })),
+      ].slice(-8));
+    }
     setGs(prev => ({ ...prev, ...state }));
   }, [onEnd]);
 
@@ -251,23 +347,70 @@ export default function GameScreen({ onEnd }) {
     engineRef.current = engine;
     engine.start();
     inputRef.current?.focus();
-    return () => engine.destroy();
-  }, [onStateChange]);
+
+    // 멀티플레이 소켓 연결
+    if (multiInfo) {
+      const { socket, side } = multiInfo;
+      engine.setMultiplayer(side);
+
+      // 상대방 빌드 단어 수신
+      socket.on('opponent_build', ({ word }) => {
+        engine.handleEnemyBuild(word);
+      });
+
+      // 상대방 전투 단어 수신
+      socket.on('opponent_battle', ({ word }) => {
+        engine.handleEnemyBattle(word);
+      });
+
+      socket.on('opponent_disconnected', () => {
+        alert('상대방이 연결을 끊었습니다.');
+        onEnd({ winner: 'player', reason: 'disconnect' });
+      });
+    }
+
+    return () => {
+      engine.destroy();
+      if (multiInfo) {
+        const { socket } = multiInfo;
+        socket.off('opponent_build');
+        socket.off('opponent_battle');
+        socket.off('opponent_disconnected');
+      }
+    };
+  }, [onStateChange, multiInfo, onEnd]);
+
+  useEffect(() => {
+    if (killFeed.length === 0) return;
+    const id = setTimeout(() => {
+      const now = Date.now();
+      setKillFeed(prev => prev.filter(k => now - k.ts < 3000));
+    }, 500);
+    return () => clearTimeout(id);
+  }, [killFeed]);
 
   const submit = () => {
     const word = input.trim();
     if (!word || composingRef.current) return;
     const result = engineRef.current?.handleInput(word);
+
+    // 멀티플레이: 성공한 입력을 서버로 전송
+    if (result && multiInfo) {
+      const { socket } = multiInfo;
+      const phase = engineRef.current?.phase;
+      if (phase === 'build')  socket.sendBuildWord(word);
+      if (phase === 'battle') socket.sendBattleWord(word);
+    }
     let text, color;
     if (result) {
-      if (result.type === 'block') {
-        text = `막음  ${result.word}`;  color = '#38bdf8';
-      } else if (result.type === 'attack') {
+      if (result.type === 'attack') {
         text = `${result.word}  ${result.damage} 피해`;
         color = result.target === 'castle' ? '#fb923c' : '#f472b6';
       } else if (result.type === 'unit') {
         const meta = UNIT_META[result.unit];
         text = `${meta?.label || result.unit} 소환`;  color = meta?.color || '#4ade80';
+      } else if (result.type === 'easter') {
+        text = '???';  color = '#f472b6';
       } else {
         text = '성벽 건설';  color = '#94a3b8';
       }
@@ -307,8 +450,45 @@ export default function GameScreen({ onEnd }) {
         </div>
       </div>
 
-      {/* 캔버스 */}
-      <canvas ref={canvasRef} style={S.canvas} />
+      {/* 단어 목록 토글 버튼 */}
+      <button
+        onClick={() => setShowWordList(v => !v)}
+        style={{
+          position: 'fixed', top: 12, right: 14, zIndex: 1000,
+          fontSize: 11, padding: '4px 10px', borderRadius: 4,
+          background: showWordList ? '#7c3aed' : 'transparent',
+          border: '1px solid #7c3aed44', color: showWordList ? '#fff' : '#7c3aed',
+          cursor: 'pointer',
+        }}
+      >단어목록</button>
+      {showWordList && <WordListPanel onClose={() => setShowWordList(false)} />}
+
+      {/* 캔버스 + 킬 피드 오버레이 */}
+      <div style={{ position: 'relative' }}>
+        <canvas ref={canvasRef} style={S.canvas} />
+        {killFeed.length > 0 && (
+          <div style={{ position: 'absolute', top: 8, right: 8, display: 'flex', flexDirection: 'column-reverse', gap: 4, pointerEvents: 'none' }}>
+            {killFeed.map(k => {
+              const age = (Date.now() - k.ts) / 3000;
+              const meta = UNIT_META[k.unitId];
+              const sideColor = k.side === 'player' ? '#f87171' : '#60a5fa';
+              return (
+                <div key={k.id} style={{
+                  display: 'flex', alignItems: 'center', gap: 6,
+                  background: 'rgba(0,0,0,0.72)', borderRadius: 4,
+                  padding: '3px 8px', opacity: Math.max(0, 1 - age),
+                  border: `1px solid ${sideColor}44`,
+                }}>
+                  <span style={{ fontSize: 11, color: sideColor }}>{k.side === 'player' ? '☠' : '✦'}</span>
+                  <UnitSprite unitId={k.unitId} size={18} side={k.side} />
+                  <span style={{ fontSize: 11, color: meta?.color || '#ccc' }}>{meta?.label || k.unitId}</span>
+                  <span style={{ fontSize: 9, color: '#555' }}>처치</span>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
 
       {/* 하단 패널 */}
       <div style={S.bottom}>
@@ -369,7 +549,7 @@ export default function GameScreen({ onEnd }) {
               onCompositionStart={() => { composingRef.current = true; }}
               onCompositionEnd={() => { composingRef.current = false; }}
               style={S.input}
-              placeholder={phase === 'build' ? '유닛·건물 이름 입력 후 Enter' : '단어 차단 / 공격 마법 입력'}
+              placeholder={phase === 'build' ? '유닛·건물 이름 입력 후 Enter' : '공격 마법 입력 후 Enter'}
               autoComplete="off"
               spellCheck={false}
             />

@@ -12,11 +12,14 @@ const WALL_POS = {
 const EFFECT_COLORS = {
   block: '#60a5fa', fire: '#fb923c', lightning: '#fde047',
   ice: '#67e8f9', explosion: '#f87171', magic: '#c084fc',
+  egg: '#facc15', heart: '#f472b6',
+  holy: '#fef08a', poison: '#86efac', heal: '#4ade80',
 };
 
 const PROJ_COLORS = {
   fire: '#fb923c', lightning: '#fde047', ice: '#67e8f9',
   explosion: '#ef4444', magic: '#c084fc', arrow: '#d4a574',
+  egg: '#facc15', holy: '#fef08a', poison: '#86efac',
 };
 
 function roundRect(ctx, x, y, w, h, r) {
@@ -86,7 +89,6 @@ export class Renderer {
     [...phase.playerBuildings, ...phase.enemyBuildings].forEach(b => this.drawBuilding(b));
     [...phase.playerUnits, ...phase.enemyUnits].forEach(u => this.drawUnit(u));
     phase.projectiles.forEach(p => this.drawProjectile(p));
-    phase.flyingWords.forEach(fw => this.drawFlyingWord(fw));
     phase.effects.forEach(e => this.drawEffect(e));
   }
 
@@ -313,14 +315,18 @@ export class Renderer {
     if (directSrc) {
       const img = this.sc.get(directSrc);
       if (img) {
-        if (flip && !def.enemySprite) {
+        if (def.animFrames) {
+          // 빌드 페이즈: 항상 첫 프레임(idle) 표시
+          drawn = this.drawAnimFrame(img, def.animFrames, 0, 'idle', bx, by, w, h, flip);
+        } else if (flip && !def.enemySprite) {
           ctx.save(); ctx.scale(-1, 1);
           ctx.drawImage(img, -bx - w, by, w, h);
           ctx.restore();
+          drawn = true;
         } else {
           ctx.drawImage(img, bx, by, w, h);
+          drawn = true;
         }
-        drawn = true;
       }
     }
     if (!drawn) {
@@ -335,6 +341,34 @@ export class Renderer {
 
     // 무기는 항상 캐릭터 위에 그림
     this.drawWeapon(def.weaponSheet, def.weaponRow, def.weaponCol, bx, by, w, h, flip);
+  }
+
+  // 스프라이트시트 프레임 애니메이션
+  drawAnimFrame(img, animFrames, animTimer, state, dx, dy, dw, dh, flip) {
+    const { cols = 2, rows = 2, walkFrames = [0], attackFrame, fps = 6 } = animFrames;
+    let frameIdx;
+    if (state === 'attack' && attackFrame != null) {
+      frameIdx = attackFrame;
+    } else if (state === 'idle') {
+      frameIdx = walkFrames[0];
+    } else {
+      frameIdx = walkFrames[Math.floor(animTimer * fps) % walkFrames.length];
+    }
+    const frameW = img.width  / cols;
+    const frameH = img.height / rows;
+    const srcX = (frameIdx % cols) * frameW;
+    const srcY = Math.floor(frameIdx / cols) * frameH;
+    const ctx = this.ctx;
+    if (flip) {
+      ctx.save();
+      ctx.translate(dx + dw, 0);
+      ctx.scale(-1, 1);
+      ctx.drawImage(img, srcX, srcY, frameW, frameH, 0, dy, dw, dh);
+      ctx.restore();
+    } else {
+      ctx.drawImage(img, srcX, srcY, frameW, frameH, dx, dy, dw, dh);
+    }
+    return true;
   }
 
   // 무기 오버레이 공통 메서드
@@ -356,7 +390,33 @@ export class Renderer {
 
     // ── 픽셀아트 스프라이트 투사체 ──
     if (this.em?.loaded) {
-      if (p.type === 'fire') {
+      if (p.type === 'arrow') {
+        const s = this.em.getArrowSrc(0, 1);
+        if (s) {
+          const angle = Math.atan2(p.vy, p.vx);
+          ctx.save();
+          ctx.imageSmoothingEnabled = false;
+          ctx.translate(p.x, p.y);
+          ctx.rotate(angle);
+          const dh = 28, dw = dh * (s.sw / s.sh);
+          ctx.drawImage(s.img, s.sx, s.sy, s.sw, s.sh, -dw / 2, -dh / 2, dw, dh);
+          ctx.restore();
+          return;
+        }
+      } else if (p.type === 'holy') {
+        const s = this.em.getHolyLoopSrc(p.elapsed);
+        if (s) {
+          const angle = Math.atan2(p.vy, p.vx);
+          ctx.save();
+          ctx.imageSmoothingEnabled = false;
+          ctx.translate(p.x, p.y);
+          ctx.rotate(angle);
+          const dh = 36, dw = dh * (s.sw / s.sh);
+          ctx.drawImage(s.img, s.sx, s.sy, s.sw, s.sh, -dw / 2, -dh / 2, dw, dh);
+          ctx.restore();
+          return;
+        }
+      } else if (p.type === 'fire') {
         const img = this.em.getFrameLoop('round_explosion', p.elapsed, 14, 16);
         if (img) {
           ctx.save();
@@ -392,20 +452,7 @@ export class Renderer {
     ctx.shadowBlur = 14;
     ctx.shadowColor = color;
 
-    if (p.type === 'arrow') {
-      ctx.strokeStyle = color;
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(p.x - 12, p.y);
-      ctx.lineTo(p.x + 4, p.y);
-      ctx.stroke();
-      ctx.fillStyle = color;
-      ctx.beginPath();
-      ctx.moveTo(p.x + 8, p.y);
-      ctx.lineTo(p.x, p.y - 4);
-      ctx.lineTo(p.x, p.y + 4);
-      ctx.fill();
-    } else if (p.type === 'lightning') {
+    if (p.type === 'lightning') {
       // 번개 볼트
       ctx.strokeStyle = color;
       ctx.lineWidth = 3;
@@ -469,10 +516,10 @@ export class Renderer {
 
   drawUnit(unit) {
     const ctx = this.ctx;
-    const w = unit.size * unit.scale;
-    const h = unit.size * unit.scale;
+    const w = unit.animFrames?.renderW ?? unit.size * unit.scale;
+    const h = unit.animFrames?.renderH ?? unit.size * unit.scale;
     const x = unit.x - w / 2;
-    const y = unit.y - h + (unit.walkBob || 0); // 걷기 bob 적용
+    const y = unit.y - h + (unit.walkBob || 0) + (unit.yOffset || 0);
     const color = unit.side === 'player' ? unit.color : unit.enemyColor;
 
     const flip = unit.side === 'enemy';
@@ -483,14 +530,17 @@ export class Renderer {
     if (directSrc) {
       const img = this.sc.get(directSrc);
       if (img) {
-        if (flip && !unit.enemySprite) {
+        if (unit.animFrames) {
+          drawn = this.drawAnimFrame(img, unit.animFrames, unit.animTimer, unit.state, x, y, w, h, flip);
+        } else if (flip && !unit.enemySprite) {
           ctx.save(); ctx.scale(-1, 1);
           ctx.drawImage(img, -x - w, y, w, h);
           ctx.restore();
+          drawn = true;
         } else {
           ctx.drawImage(img, x, y, w, h);
+          drawn = true;
         }
-        drawn = true;
       }
     }
     if (!drawn) {
@@ -517,6 +567,78 @@ export class Renderer {
       ctx.fillStyle = ratio > 0.5 ? '#4ade80' : ratio > 0.25 ? '#facc15' : '#ef4444';
       ctx.fillRect(x, y - 5, w * ratio, 3);
     }
+
+    // charm_aura: 분홍 오라 원
+    if (unit.ability === 'charm_aura') {
+      const range = unit.abilityData?.range || 90;
+      ctx.save();
+      ctx.globalAlpha = 0.10 + Math.sin(Date.now() / 400) * 0.04;
+      ctx.fillStyle = '#f472b6';
+      ctx.beginPath();
+      ctx.arc(unit.x, unit.y - h / 2, range, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    // 상태이상 / 어빌리티 시각화
+    const debuffs = unit.debuffs || [];
+    if (debuffs.some(d => d.source === 'egg')) {
+      // 끈적임: 노란 테두리
+      ctx.strokeStyle = '#facc15'; ctx.lineWidth = 2; ctx.globalAlpha = 0.8;
+      ctx.strokeRect(x, y, w, h); ctx.globalAlpha = 1;
+    }
+    if (debuffs.some(d => d.type === 'charmed')) {
+      // 매혹: 분홍 테두리
+      ctx.strokeStyle = '#f472b6'; ctx.lineWidth = 2; ctx.globalAlpha = 0.85;
+      ctx.strokeRect(x, y, w, h); ctx.globalAlpha = 1;
+    }
+    if (debuffs.some(d => d.type === 'life_steal_reduce')) {
+      // 신성 디버프 (피흡 감소): 황금 점선 테두리
+      ctx.strokeStyle = '#fef08a'; ctx.lineWidth = 2;
+      ctx.setLineDash([3, 2]); ctx.globalAlpha = 0.9;
+      ctx.strokeRect(x - 1, y - 1, w + 2, h + 2);
+      ctx.setLineDash([]); ctx.globalAlpha = 1;
+    }
+    if (debuffs.some(d => d.type === 'atk_mult' && d.source === 'shaman')) {
+      // 저주 (주술사 디버프): 보라 테두리
+      ctx.strokeStyle = '#818cf8'; ctx.lineWidth = 2; ctx.globalAlpha = 0.85;
+      ctx.strokeRect(x, y, w, h); ctx.globalAlpha = 1;
+    }
+    if (unit.ability === 'rage' && unit.enraged) {
+      // rage 발동: 빨간 글로우 오라
+      ctx.save();
+      ctx.shadowBlur = 16; ctx.shadowColor = '#ef4444';
+      ctx.strokeStyle = '#ef4444'; ctx.lineWidth = 2;
+      ctx.globalAlpha = 0.7 + Math.sin(Date.now() / 120) * 0.2;
+      ctx.strokeRect(x - 2, y - 2, w + 4, h + 4);
+      ctx.restore();
+    }
+    if (unit.ability === 'regen') {
+      // 재생: 녹색 미세 글로우
+      ctx.save();
+      ctx.shadowBlur = 8; ctx.shadowColor = '#4ade80';
+      ctx.strokeStyle = '#4ade80'; ctx.lineWidth = 1;
+      ctx.globalAlpha = 0.4 + Math.sin(Date.now() / 600) * 0.15;
+      ctx.strokeRect(x, y, w, h);
+      ctx.restore();
+    }
+  }
+
+  drawCat(cat) {
+    const size = 48;
+    const x = cat.x - size / 2;
+    const y = cat.y - size;
+    const bob = Math.sin(Date.now() / 150) * 2;
+    this.drawTile(cat.sheet, cat.tileRow, cat.tileCol, x, y + bob, size, size, false);
+    // aura 범위 표시 (분홍 반투명 원)
+    const ctx = this.ctx;
+    ctx.save();
+    ctx.globalAlpha = 0.12 + Math.sin(Date.now() / 400) * 0.05;
+    ctx.fillStyle = '#f472b6';
+    ctx.beginPath();
+    ctx.arc(cat.x, cat.y - size / 2, cat.auraRange, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
   }
 
   drawBuilding(b) {
@@ -560,30 +682,6 @@ export class Renderer {
     ctx.font = '10px sans-serif';
     ctx.textAlign = 'center';
     ctx.fillText(b.name, b.x, y - 3);
-  }
-
-  drawFlyingWord(fw) {
-    const ctx = this.ctx;
-    ctx.font = 'bold 15px "Noto Sans KR", sans-serif';
-    const tw = ctx.measureText(fw.word).width;
-    const pad = 7, bw = tw + pad * 2, bh = 26;
-    const bx = fw.x - bw / 2, by = fw.y - bh / 2;
-
-    ctx.fillStyle = 'rgba(180, 20, 20, 0.88)';
-    ctx.beginPath();
-    roundRect(ctx, bx, by, bw, bh, 5);
-    ctx.fill();
-
-    ctx.strokeStyle = '#ff9090';
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    roundRect(ctx, bx, by, bw, bh, 5);
-    ctx.stroke();
-
-    ctx.fillStyle = '#fff';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(fw.word, fw.x, fw.y);
   }
 
   drawEffect(e) {
@@ -687,6 +785,102 @@ export class Renderer {
       const rr = 12 + (1 - a) * 16;
       ctx.beginPath(); ctx.arc(e.x, e.y, rr, 0, Math.PI * 2); ctx.stroke();
       ctx.beginPath(); ctx.arc(e.x, e.y, rr * 0.5, 0, Math.PI * 2); ctx.stroke();
+
+    } else if (e.type === 'arrow_hit') {
+      // 화살 피격 애니메이션
+      if (this.em?.loaded) {
+        const progress = e.maxTimer > 0 ? 1 - e.timer / e.maxTimer : 1;
+        const s = this.em.getArrowImpactSrc(progress, 0);
+        if (s) {
+          ctx.save();
+          ctx.imageSmoothingEnabled = false;
+          ctx.globalAlpha = Math.max(0, e.timer / e.maxTimer);
+          const sz = 72;
+          ctx.drawImage(s.img, s.sx, s.sy, s.sw, s.sh, e.x - sz / 2, e.y - sz / 2, sz, sz);
+          ctx.restore();
+          return;
+        }
+      }
+
+    } else if (e.type === 'holy') {
+      // Holy VFX 01 Impact 스프라이트 (7프레임)
+      if (this.em?.loaded) {
+        const progress = e.maxTimer > 0 ? 1 - e.timer / e.maxTimer : 1;
+        const s = this.em.getHolyImpactSrc(progress);
+        if (s) {
+          ctx.save();
+          ctx.imageSmoothingEnabled = false;
+          ctx.globalAlpha = Math.max(0, e.timer / e.maxTimer);
+          const sz = 110;
+          ctx.drawImage(s.img, s.sx, s.sy, s.sw, s.sh, e.x - sz / 2, e.y - sz / 2, sz, sz);
+          ctx.restore();
+          return;
+        }
+      }
+      // fallback: 황금 십자 방사
+      ctx.globalAlpha = a;
+      ctx.shadowBlur = 20; ctx.shadowColor = '#fef08a';
+      ctx.strokeStyle = '#fef08a'; ctx.lineWidth = 2.5;
+      const hr = 10 + (1 - a) * 22;
+      ctx.beginPath(); ctx.arc(e.x, e.y, hr, 0, Math.PI * 2); ctx.stroke();
+      ctx.strokeStyle = '#fff'; ctx.lineWidth = 3;
+      const arm = 14 + (1 - a) * 10;
+      for (let i = 0; i < 4; i++) {
+        const ang = (i / 4) * Math.PI * 2;
+        ctx.beginPath();
+        ctx.moveTo(e.x + Math.cos(ang) * 4, e.y + Math.sin(ang) * 4);
+        ctx.lineTo(e.x + Math.cos(ang) * arm, e.y + Math.sin(ang) * arm);
+        ctx.stroke();
+      }
+      ctx.globalAlpha = a * 0.6;
+      ctx.fillStyle = '#fef08a';
+      ctx.beginPath(); ctx.arc(e.x, e.y, 7, 0, Math.PI * 2); ctx.fill();
+
+    } else if (e.type === 'poison') {
+      // 독: 보라/초록 거품 방울
+      ctx.globalAlpha = a;
+      ctx.shadowBlur = 12; ctx.shadowColor = '#86efac';
+      const bubblePos = [[-7, -5], [5, -8], [0, 4], [-4, 9], [8, 2]];
+      for (const [bx, by] of bubblePos) {
+        const r = 3 + Math.abs(bx + by) % 3;
+        ctx.fillStyle = Math.abs(bx) % 2 === 0 ? '#86efac' : '#a78bfa';
+        ctx.beginPath();
+        ctx.arc(e.x + bx * (1 + (1 - a) * 1.5), e.y + by * (1 + (1 - a) * 1.5), r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+    } else if (e.type === 'heal') {
+      // 힐: 상승하는 녹색 십자
+      const rise = (1 - a) * 18;
+      ctx.globalAlpha = a;
+      ctx.shadowBlur = 10; ctx.shadowColor = '#4ade80';
+      ctx.strokeStyle = '#4ade80'; ctx.lineWidth = 2.5;
+      ctx.beginPath(); ctx.moveTo(e.x - 6, e.y - rise); ctx.lineTo(e.x + 6, e.y - rise); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(e.x, e.y - rise - 6); ctx.lineTo(e.x, e.y - rise + 6); ctx.stroke();
+
+    } else if (e.type === 'egg') {
+      // 달걀 스플랫: 노른자 원 + 흰자 번짐
+      ctx.globalAlpha = a;
+      ctx.fillStyle = '#fef9c3';
+      ctx.beginPath(); ctx.ellipse(e.x, e.y, 18 + (1-a)*14, 12 + (1-a)*10, 0, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#facc15';
+      ctx.beginPath(); ctx.arc(e.x, e.y, 7, 0, Math.PI * 2); ctx.fill();
+
+    } else if (e.type === 'heart') {
+      // 하트: 인간 유닛 매혹 표시
+      ctx.globalAlpha = a;
+      ctx.fillStyle = '#f472b6';
+      ctx.shadowBlur = 10; ctx.shadowColor = '#f472b6';
+      const s = 1 + (1 - a) * 0.5;
+      ctx.save();
+      ctx.translate(e.x, e.y);
+      ctx.scale(s, s);
+      ctx.beginPath();
+      ctx.moveTo(0, -4);
+      ctx.bezierCurveTo(-10, -14, -20, -4, 0, 8);
+      ctx.bezierCurveTo(20, -4, 10, -14, 0, -4);
+      ctx.fill();
+      ctx.restore();
 
     } else {
       // fire / arrow / block / 기본: 발광 원

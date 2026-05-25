@@ -25,6 +25,27 @@ export class GameEngine {
     this.strategy = strategy;
   }
 
+  setMultiplayer(side) {
+    this.multiSide = side; // 'p1' | 'p2'
+    // 멀티플레이에서는 AI 타이핑 끔
+    if (this.buildPhase) this.buildPhase.aiEnabled = false;
+  }
+
+  // 상대방 빌드 단어 처리
+  handleEnemyBuild(word) {
+    if (this.phase !== 'build') return;
+    const { BUILD_WORDS } = this.buildPhase.constructor;
+    // BuildPhase에서 직접 enemy spawn
+    const match = BUILD_WORDS?.find(w => w.word === word);
+    if (match) this.buildPhase.spawn('enemy', match);
+  }
+
+  // 상대방 전투 단어 처리
+  handleEnemyBattle(word) {
+    if (this.phase !== 'battle') return;
+    this.battlePhase.handleEnemyInput(word);
+  }
+
   async start() {
     this.destroyed = false;
     await this.spriteCache.preloadSheets();
@@ -45,6 +66,7 @@ export class GameEngine {
     ]);
     this.renderer = new Renderer(this.canvas, this.ctx, this.spriteCache, this.effectManager);
     this.buildPhase = new BuildPhase(this);
+    if (this.multiSide) this.buildPhase.aiEnabled = false;
     this.buildPhase.start();
     this.emit();
     this.raf = requestAnimationFrame(this.loop.bind(this));
@@ -98,6 +120,7 @@ export class GameEngine {
         enemyMaxHp: b.enemyCastle.maxHp,
         playerUnits: b.playerUnits.map(u => ({ unitId: u.unitId, hp: u.hp, maxHp: u.maxHp })),
         playerBuildings: b.playerBuildings.map(bl => ({ buildingId: bl.buildingId, hp: bl.hp, maxHp: bl.maxHp })),
+        newKills: b.newKills.splice(0),
       });
     }
   }
@@ -124,10 +147,10 @@ export class GameEngine {
       phase: 'over',
       winner,
       stats: {
-        wordsTyped:   (bp?.wordsTyped  || 0) + (bat?.wordsTyped  || 0),
-        wpm:          bp?.wpm  || 0,
-        unitsBuilt:   bp?.playerArmy.length || 0,
-        blockedWords: bat?.blockedWords || 0,
+        wordsTyped: (bp?.wordsTyped || 0) + (bat?.wordsTyped || 0),
+        wpm:        bp?.wpm || 0,
+        unitsBuilt: bp?.playerArmy.length || 0,
+        kills:      bat?.kills || 0,
       },
     });
   }

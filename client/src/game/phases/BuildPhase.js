@@ -1,6 +1,8 @@
 import { BUILD_WORDS } from '../../data/words.js';
 
 export class BuildPhase {
+  static BUILD_WORDS = BUILD_WORDS;
+
   constructor(engine) {
     this.engine = engine;
     this.timer = 30;
@@ -10,6 +12,7 @@ export class BuildPhase {
     this.startTime = 0;
     this.aiTimer = 0;
     this.aiInterval = 2.5;
+    this.aiEnabled = true;
   }
 
   start() {
@@ -20,11 +23,13 @@ export class BuildPhase {
     this.timer -= dt;
     if (this.timer <= 0) { this.engine.startBattle(); return; }
 
-    this.aiTimer += dt;
-    if (this.aiTimer >= this.aiInterval) {
-      this.aiTimer = 0;
-      this.aiInterval = 2.0 + Math.random() * 1.5;
-      this.aiType();
+    if (this.aiEnabled) {
+      this.aiTimer += dt;
+      if (this.aiTimer >= this.aiInterval) {
+        this.aiTimer = 0;
+        this.aiInterval = 2.0 + Math.random() * 1.5;
+        this.aiType();
+      }
     }
   }
 

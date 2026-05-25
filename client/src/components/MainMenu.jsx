@@ -43,7 +43,7 @@ function HeroCanvas() {
   );
 }
 
-export default function MainMenu({ onStart }) {
+export default function MainMenu({ onStart, onMulti }) {
   return (
     <div style={S.page}>
 
@@ -80,7 +80,8 @@ export default function MainMenu({ onStart }) {
             마법으로 적의 성을 <span style={S.heroHighlight}>박살내라</span>
           </p>
           <div style={S.heroBtns}>
-            <button style={S.heroPlayBtn} onClick={onStart}>▶ 지금 바로 플레이</button>
+            <button style={S.heroPlayBtn} onClick={onStart}>▶ 싱글 플레이</button>
+            <button style={S.heroPlayBtn} onClick={onMulti}>🌐 온라인 대전</button>
             <button style={S.heroHowBtn}>게임 방법 보기</button>
           </div>
           <div style={S.heroMeta}>

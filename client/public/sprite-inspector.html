@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>Sprite Inspector</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: #111; color: #eee; font-family: monospace; padding: 16px; }
+h1 { color: #4a9eff; margin-bottom: 8px; }
+h2 { color: #ffd700; margin: 24px 0 8px; }
+p  { color: #aaa; font-size: 13px; margin-bottom: 8px; }
+
+.controls { margin-bottom: 16px; display: flex; align-items: center; gap: 16px; }
+.controls label { font-size: 14px; }
+input[type=range] { width: 150px; }
+
+.sheet-wrap {
+  position: relative;
+  display: inline-block;
+  cursor: crosshair;
+  border: 1px solid #444;
+}
+.sheet-wrap img {
+  display: block;
+  image-rendering: pixelated;
+}
+.grid-canvas {
+  position: absolute;
+  top: 0; left: 0;
+  pointer-events: none;
+}
+.hover-canvas {
+  position: absolute;
+  top: 0; left: 0;
+}
+
+#tooltip {
+  position: fixed;
+  bottom: 16px; left: 16px;
+  background: rgba(0,0,0,0.85);
+  color: #ffd700;
+  padding: 8px 16px;
+  border: 1px solid #555;
+  border-radius: 6px;
+  font-size: 15px;
+  z-index: 999;
+}
+
+.unit-table { border-collapse: collapse; margin-top: 24px; width: 100%; max-width: 700px; }
+.unit-table th { text-align: left; padding: 4px 12px; color: #888; border-bottom: 1px solid #333; }
+.unit-table td { padding: 4px 12px; border-bottom: 1px solid #222; }
+.ok   { color: #4dff91; }
+.warn { color: #ffd700; }
+.err  { color: #ff5555; }
+</style>
+</head>
+<body>
+
+<h1>🔍 Sprite Inspector</h1>
+<p>타일 위에 마우스를 올리면 row, col 좌표가 하단에 표시됩니다. 마우스 클릭하면 좌표를 콘솔에 복사합니다.</p>
+
+<div class="controls">
+  <label>줌: <input type="range" id="zoom" min="2" max="8" value="4" step="1"> <span id="zoomVal">4x</span></label>
+  <label>좌표 표시: <input type="checkbox" id="showCoords" checked></label>
+</div>
+
+<h2>tiny-addon — spacing: 0, cols: 12</h2>
+<p>row 0~3: 아이템 | row 4~7: 캐릭터 | row 8~11: 몬스터 | row 12~15: 무기</p>
+<div class="sheet-wrap" id="wrap-addon">
+  <img id="img-addon" src="/assets/sprites/TinyPackAddOn/Sprites-16x16.png">
+  <canvas class="hover-canvas" id="hover-addon"></canvas>
+  <canvas class="grid-canvas"  id="grid-addon"></canvas>
+</div>
+
+<h2>tiny-dungeon — spacing: 1, cols: 12</h2>
+<p>row 7: 검사/궁수/마법사 | row 8: 기사 | row 10: 유령</p>
+<div class="sheet-wrap" id="wrap-dungeon">
+  <img id="img-dungeon" src="/assets/sprites/tiny-creatures/Tilemap/Kenney_tiny_dungeon.png">
+  <canvas class="hover-canvas" id="hover-dungeon"></canvas>
+  <canvas class="grid-canvas"  id="grid-dungeon"></canvas>
+</div>
+
+<h2>tiny-creatures — spacing: 0, cols: 10</h2>
+<p>좀비 등 크리처 스프라이트</p>
+<div class="sheet-wrap" id="wrap-creatures">
+  <img id="img-creatures" src="/assets/sprites/tiny-creatures/Tilemap/tilemap_packed.png">
+  <canvas class="hover-canvas" id="hover-creatures"></canvas>
+  <canvas class="grid-canvas"  id="grid-creatures"></canvas>
+</div>
+
+<div id="tooltip">마우스를 스프라이트 위에 올려보세요</div>
+
+<h2>현재 유닛 좌표</h2>
+<table class="unit-table">
+  <tr><th>유닛</th><th>sheet</th><th>row</th><th>col</th><th>상태</th></tr>
+  <tr class="ok"><td>검사</td><td>tiny-dungeon</td><td>7</td><td>3</td><td>✅ 확인</td></tr>
+  <tr class="ok"><td>궁수</td><td>tiny-dungeon</td><td>7</td><td>1</td><td>✅ 확인</td></tr>
+  <tr class="ok"><td>기사</td><td>tiny-dungeon</td><td>8</td><td>0</td><td>✅ 확인</td></tr>
+  <tr class="ok"><td>마법사</td><td>tiny-dungeon</td><td>7</td><td>0</td><td>✅ 확인</td></tr>
+  <tr class="ok"><td>성기사</td><td>tiny-addon</td><td>4</td><td>3</td><td>✅ 확인</td></tr>
+  <tr class="ok"><td>도적</td><td>tiny-addon</td><td>6</td><td>2</td><td>✅ 확인</td></tr>
+  <tr class="ok"><td>해골</td><td>tiny-addon</td><td>10</td><td>2</td><td>✅ 확인</td></tr>
+  <tr class="ok"><td>유령</td><td>tiny-dungeon</td><td>10</td><td>1</td><td>✅ 확인</td></tr>
+  <tr class="warn"><td>좀비</td><td>tiny-addon</td><td>10</td><td>0</td><td>⚠️ 미확인</td></tr>
+  <tr class="warn"><td>뱀파이어</td><td>tiny-addon</td><td>9</td><td>0</td><td>⚠️ 미확인</td></tr>
+  <tr class="warn"><td>리치</td><td>tiny-addon</td><td>11</td><td>11</td><td>⚠️ 미확인</td></tr>
+  <tr class="warn"><td>흑기사</td><td>tiny-addon</td><td>11</td><td>10</td><td>⚠️ 미확인</td></tr>
+  <tr class="ok"><td>박쥐</td><td>tiny-addon</td><td>8</td><td>9</td><td>✅ 확인</td></tr>
+  <tr class="ok"><td>고블린</td><td>tiny-addon</td><td>9</td><td>2</td><td>✅ 확인</td></tr>
+  <tr class="err"><td>폭탄병</td><td>tiny-addon</td><td>8</td><td>4</td><td>❌ 고양이와 충돌</td></tr>
+  <tr class="ok"><td>오크</td><td>tiny-addon</td><td>9</td><td>5</td><td>✅ 확인</td></tr>
+  <tr class="warn"><td>샤먼</td><td>tiny-addon</td><td>9</td><td>6</td><td>⚠️ 미확인</td></tr>
+  <tr class="ok"><td>고양이</td><td>tiny-addon</td><td>8</td><td>4</td><td>✅ 확인</td></tr>
+</table>
+
+<script>
+const SHEETS = {
+  addon: {
+    imgId: 'img-addon', hoverId: 'hover-addon', gridId: 'grid-addon', wrapId: 'wrap-addon',
+    cols: 12, tileW: 16, tileH: 16, spacing: 0,
+  },
+  dungeon: {
+    imgId: 'img-dungeon', hoverId: 'hover-dungeon', gridId: 'grid-dungeon', wrapId: 'wrap-dungeon',
+    cols: 12, tileW: 16, tileH: 16, spacing: 1,
+  },
+  creatures: {
+    imgId: 'img-creatures', hoverId: 'hover-creatures', gridId: 'grid-creatures', wrapId: 'wrap-creatures',
+    cols: 10, tileW: 16, tileH: 16, spacing: 0,
+  },
+};
+
+let zoom = 4;
+let showCoords = true;
+
+const tooltip = document.getElementById('tooltip');
+const zoomInput = document.getElementById('zoom');
+const zoomVal   = document.getElementById('zoomVal');
+const coordChk  = document.getElementById('showCoords');
+
+zoomInput.addEventListener('input', () => {
+  zoom = +zoomInput.value;
+  zoomVal.textContent = zoom + 'x';
+  Object.values(SHEETS).forEach(s => { if (s.loaded) { applyZoom(s); drawGrid(s); } });
+});
+coordChk.addEventListener('change', () => {
+  showCoords = coordChk.checked;
+  Object.values(SHEETS).forEach(s => { if (s.loaded) drawGrid(s); });
+});
+
+function applyZoom(s) {
+  const img = document.getElementById(s.imgId);
+  const step = s.tileW + s.spacing;
+  const rows = Math.floor(img.naturalHeight / step);
+  const w = s.cols * s.tileW * zoom;
+  const h = rows * s.tileH * zoom;
+  img.style.width  = w + 'px';
+  img.style.height = h + 'px';
+  ['hover', 'grid'].forEach(prefix => {
+    const c = document.getElementById(prefix + '-' + s.imgId.split('-')[1]);
+    c.width  = w;
+    c.height = h;
+    c.style.width  = w + 'px';
+    c.style.height = h + 'px';
+  });
+  s.rows = rows;
+}
+
+function drawGrid(s) {
+  const canvas = document.getElementById(s.gridId);
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  const tw = s.tileW * zoom;
+  const th = s.tileH * zoom;
+
+  ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+  ctx.lineWidth = 1;
+  for (let r = 0; r <= s.rows; r++) {
+    ctx.beginPath(); ctx.moveTo(0, r * th); ctx.lineTo(canvas.width, r * th); ctx.stroke();
+  }
+  for (let c = 0; c <= s.cols; c++) {
+    ctx.beginPath(); ctx.moveTo(c * tw, 0); ctx.lineTo(c * tw, canvas.height); ctx.stroke();
+  }
+
+  if (showCoords && zoom >= 3) {
+    ctx.font = Math.max(7, zoom * 1.5) + 'px monospace';
+    ctx.fillStyle = 'rgba(255,220,0,0.55)';
+    for (let r = 0; r < s.rows; r++) {
+      for (let c = 0; c < s.cols; c++) {
+        ctx.fillText(r + ',' + c, c * tw + 1, r * th + Math.max(9, zoom * 2));
+      }
+    }
+  }
+}
+
+function setupHover(s) {
+  const wrap  = document.getElementById(s.wrapId);
+  const hover = document.getElementById(s.hoverId);
+  const img   = document.getElementById(s.imgId);
+  const tw = () => s.tileW * zoom;
+  const th = () => s.tileH * zoom;
+
+  wrap.addEventListener('mousemove', e => {
+    const rect = hover.getBoundingClientRect();
+    const col = Math.floor((e.clientX - rect.left) / tw());
+    const row = Math.floor((e.clientY - rect.top)  / th());
+    if (col < 0 || col >= s.cols || row < 0 || row >= s.rows) return;
+
+    const ctx = hover.getContext('2d');
+    ctx.clearRect(0, 0, hover.width, hover.height);
+
+    // highlight current tile
+    ctx.strokeStyle = '#ff0';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(col * tw() + 1, row * th() + 1, tw() - 2, th() - 2);
+
+    // mini preview (8× scale) at bottom-left
+    const step = s.tileW + s.spacing;
+    const sx = col * step, sy = row * step;
+    const pw = s.tileW * 8, ph = s.tileH * 8;
+    const px = 4, py = hover.height - ph - 4;
+    ctx.clearRect(px - 1, py - 1, pw + 2, ph + 2);
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(img, sx, sy, s.tileW, s.tileH, px, py, pw, ph);
+    ctx.strokeStyle = '#ff0'; ctx.lineWidth = 1;
+    ctx.strokeRect(px, py, pw, ph);
+
+    tooltip.textContent = `[${s.imgId.replace('img-','')}]  row: ${row}, col: ${col}  →  tileRow: ${row}, tileCol: ${col}`;
+  });
+
+  wrap.addEventListener('mouseleave', () => {
+    const ctx = hover.getContext('2d');
+    ctx.clearRect(0, 0, hover.width, hover.height);
+    tooltip.textContent = '마우스를 스프라이트 위에 올려보세요';
+  });
+
+  wrap.addEventListener('click', e => {
+    const rect = hover.getBoundingClientRect();
+    const col = Math.floor((e.clientX - rect.left) / tw());
+    const row = Math.floor((e.clientY - rect.top)  / th());
+    const name = s.imgId.replace('img-', '');
+    console.log(`sheet:'${name === 'addon' ? 'tiny-addon' : 'tiny-dungeon'}', tileRow:${row}, tileCol:${col}`);
+    alert(`복사:\ntileRow: ${row}, tileCol: ${col}`);
+  });
+}
+
+Object.values(SHEETS).forEach(s => {
+  const img = document.getElementById(s.imgId);
+  const init = () => {
+    s.loaded = true;
+    applyZoom(s);
+    drawGrid(s);
+    setupHover(s);
+  };
+  if (img.complete && img.naturalWidth > 0) init();
+  else img.addEventListener('load', init);
+  img.addEventListener('error', () => {
+    const wrap = document.getElementById(s.wrapId);
+    wrap.innerHTML = `<p style="color:red;padding:16px">이미지 로드 실패: ${img.src}</p>`;
+  });
+});
+</script>
+</body>
+</html>

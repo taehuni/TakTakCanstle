@@ -25,7 +25,7 @@ export default function ResultScreen({ result, onReplay, onMenu }) {
           <StatCard label="입력 단어"  value={stats.wordsTyped}  unit="개" color="#c084fc" />
           <StatCard label="분당 타수"  value={stats.wpm}         unit="WPM" color="#60a5fa" />
           <StatCard label="건설 부대"  value={stats.unitsBuilt}  unit="명" color="#4ade80" />
-          <StatCard label="방어 차단"  value={stats.blockedWords} unit="회" color="#f87171" />
+          <StatCard label="적 처치"    value={stats.kills}        unit="킬" color="#f87171" />
         </div>
 
         {/* 버튼 */}
@@ -50,7 +50,7 @@ function StatCard({ label, value, unit, color }) {
 
 function getGrade(stats, won) {
   if (!won) return { letter: 'F', color: '#6b6b8a', label: '다음엔 이길 수 있어' };
-  const score = (stats.wpm || 0) * 2 + (stats.wordsTyped || 0) * 4 + (stats.blockedWords || 0) * 3;
+  const score = (stats.wpm || 0) * 2 + (stats.wordsTyped || 0) * 4 + (stats.kills || 0) * 3;
   if (score >= 180) return { letter: 'S', color: '#fde047', label: '완벽한 타자 실력!' };
   if (score >= 120) return { letter: 'A', color: '#4ade80', label: '훌륭한 전략가' };
   if (score >= 70)  return { letter: 'B', color: '#60a5fa', label: '선전했습니다' };
