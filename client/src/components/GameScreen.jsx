@@ -3,35 +3,10 @@ import { GameEngine } from '../game/GameEngine.js';
 import { WEAPON_WORDS, BUILD_WORDS, EASTER_WORDS } from '../data/words.js';
 import { UNIT_DEFS, BUILDING_DEFS } from '../data/units.js';
 import { SHEETS } from '../game/SpriteCache.js';
+import { UNIT_META } from '../data/unitMeta.js';
 
 const W = 1200, H = 500;
-
-const UNIT_META = {
-  swordsman:   { label: '검사',   color: '#60a5fa' },
-  archer:      { label: '궁수',   color: '#4ade80' },
-  knight:      { label: '기사',   color: '#fbbf24' },
-  wizard:      { label: '마법사', color: '#c084fc' },
-  paladin:     { label: '성기사', color: '#fde68a' },
-  rogue:       { label: '도적',   color: '#94a3b8' },
-  crossbowman: { label: '석궁병', color: '#7dd3fc' },
-  skeleton:    { label: '해골',   color: '#e2e2e2' },
-  ghost:       { label: '유령',   color: '#a5f3fc' },
-  zombie:      { label: '좀비',   color: '#86efac' },
-  vampire:     { label: '뱀파이어', color: '#f472b6' },
-  lich:        { label: '리치',   color: '#c4b5fd' },
-  death_knight:{ label: '흑기사', color: '#6366f1' },
-  bat:         { label: '박쥐',   color: '#a78bfa' },
-  goblin:      { label: '고블린', color: '#a3e635' },
-  bomber:      { label: '폭탄병', color: '#fb923c' },
-  wolf_rider:  { label: '기마병', color: '#86efac' },
-  troll:       { label: '트롤',   color: '#4ade80' },
-  orc:         { label: '오크',   color: '#4ade80' },
-  shaman:      { label: '샤먼',   color: '#818cf8' },
-  berserker:   { label: '광전사', color: '#f97316' },
-  warchief:    { label: '족장',   color: '#22c55e' },
-  cat:         { label: '고양이', color: '#f9a8d4' },
-};
-const BUILD_ORDER = ['swordsman', 'archer', 'knight', 'wizard', 'cat'];
+const BUILD_ORDER = ['swordsman', 'archer', 'knight'];
 
 // ── 유닛 스프라이트 렌더 ────────────────────────────────────────────────────
 function UnitSprite({ unitId, side = 'player', size = 36 }) {
@@ -117,6 +92,44 @@ function BuildingSprite({ buildingId, size = 32 }) {
   return <canvas ref={ref} width={size} height={size} style={{ imageRendering: 'pixelated', display: 'block', flexShrink: 0 }} />;
 }
 
+// ── 공성 마법 쿨다운 카드 ────────────────────────────────────────────────────
+function SpellChip({ w, color, spellCooldowns }) {
+  const cd = spellCooldowns[w.word] || 0;
+  const onCd = cd > 0 && w.cooldown != null;
+  const progress = w.cooldown ? cd / w.cooldown : 0;
+  return (
+    <span style={{
+      ...S.chip,
+      color: onCd ? '#3a3a4a' : color,
+      borderColor: onCd ? '#2a2a3a55' : color + '33',
+      position: 'relative', overflow: 'hidden',
+      minWidth: 48, textAlign: 'center',
+    }}>
+      <span style={{ opacity: onCd ? 0.2 : 1, display: 'flex', alignItems: 'center', gap: 3 }}>
+        {w.word}
+        <span style={{ fontSize: 9, color: color + '55' }}>{w.damage}</span>
+      </span>
+      {onCd && (
+        <>
+          <span style={{
+            position: 'absolute', inset: 0,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 11, color: '#7a7a8a', fontWeight: 700,
+          }}>
+            {Math.ceil(cd)}s
+          </span>
+          <span style={{
+            position: 'absolute', bottom: 0, left: 0,
+            height: 2, background: color + '88',
+            width: `${(1 - progress) * 100}%`,
+            transition: 'width 0.1s linear',
+          }} />
+        </>
+      )}
+    </span>
+  );
+}
+
 // ── HP 바 ───────────────────────────────────────────────────────────────────
 function HpBar({ label, hp, maxHp, color, rtl, slim }) {
   const ratio = Math.max(0, hp / maxHp);
@@ -146,34 +159,41 @@ function StrategyPanel({ strategy, onChange, locked }) {
         onMouseEnter={() => !locked && setHovered(hoverKey)}
         onMouseLeave={() => setHovered(null)}
         style={{
-          fontSize: 11, padding: '4px 11px', borderRadius: 4,
-          border: `1px solid ${on ? '#c8a040' : locked ? '#1a1208' : isHovered ? '#5a3a1a' : '#3a2510'}`,
+          flex: 1,
+          padding: '9px 4px',
+          borderRadius: 5,
+          border: `1px solid ${on ? '#c8a040' : locked ? '#1e1610' : isHovered ? '#5a3a1a' : '#2e1e0c'}`,
           background: on
-            ? 'linear-gradient(135deg,#3a2810 0%,#251a08 100%)'
-            : isHovered ? 'rgba(90,58,26,0.25)' : 'transparent',
-          color: on ? '#f0d090' : locked ? '#252525' : isHovered ? '#c8a060' : '#998877',
+            ? 'linear-gradient(135deg, #4a3010 0%, #2e1c08 100%)'
+            : isHovered ? 'rgba(90,58,26,0.2)' : 'rgba(0,0,0,0.25)',
+          color: on ? '#f0d090' : locked ? '#2e2a22' : isHovered ? '#c8a060' : '#6a5840',
           cursor: locked ? 'default' : 'pointer',
-          fontFamily: 'inherit', fontWeight: on ? 700 : 400,
-          transition: 'all 0.1s',
+          fontFamily: 'inherit',
+          fontWeight: on ? 800 : 400,
+          fontSize: 11,
+          letterSpacing: on ? 0.3 : 0,
+          transition: 'all 0.12s',
+          boxShadow: on ? 'inset 0 1px 0 rgba(255,220,100,0.15)' : 'none',
         }}
       >{label}</button>
     );
   };
   return (
     <div style={S.stratPanel}>
-      <div style={S.secTitle}>
+      <div style={{ ...S.secTitle, marginBottom: 10 }}>
         전략 설정
-        {locked && <span style={{ fontSize: 9, color: '#2a2a2a', marginLeft: 6, letterSpacing: 0 }}>전투중 고정</span>}
-        {!locked && <span style={{ fontSize: 9, color: '#5a3a1a', marginLeft: 6, letterSpacing: 0 }}>클릭해서 변경</span>}
+        {locked
+          ? <span style={{ fontSize: 9, color: '#2e2820', marginLeft: 6 }}>전투 중 고정</span>
+          : <span style={{ fontSize: 9, color: '#7a5a30', marginLeft: 6 }}>클릭해서 변경</span>}
       </div>
       {[
-        { key: 'wallPos',    label: '성벽 위치', opts: [['back','후방'],['mid','중간'],['front','전방']] },
-        { key: 'meleeMode',  label: '근거리',    opts: [['advance','전진'],['hold','성벽 대기']] },
-        { key: 'rangedMode', label: '원거리',    opts: [['advance','전진'],['behind','성벽 뒤']] },
+        { key: 'wallPos',    label: '⛩ 성벽 위치', opts: [['back','후방'],['mid','중간'],['front','전방']] },
+        { key: 'meleeMode',  label: '⚔ 근거리',    opts: [['advance','전진'],['hold','성벽 대기']] },
+        { key: 'rangedMode', label: '🏹 원거리',    opts: [['advance','전진'],['behind','성벽 뒤']] },
       ].map(({ key, label, opts }) => (
         <div key={key} style={S.stratRow}>
-          <span style={S.stratLabel}>{label}</span>
-          <div style={{ display: 'flex', gap: 4 }}>
+          <div style={S.stratLabel}>{label}</div>
+          <div style={{ display: 'flex', gap: 5 }}>
             {opts.map(([val, lbl]) => btn(key, val, lbl))}
           </div>
         </div>
@@ -184,6 +204,9 @@ function StrategyPanel({ strategy, onChange, locked }) {
 
 // ── 빌드 단계 좌측 패널 ────────────────────────────────────────────────────
 function BuildSidePanel({ playerArmy }) {
+  const discovered = JSON.parse(localStorage.getItem('tcb_discovered') || '[]');
+  const hiddenUnlocked = BUILD_WORDS.filter(w => w.hidden && discovered.includes(w.unit));
+
   return (
     <div style={S.sidePanel}>
       <div style={S.secTitle}>소환 가능</div>
@@ -199,6 +222,23 @@ function BuildSidePanel({ playerArmy }) {
           <div style={{ fontSize: 9, color: '#94a3b8', marginTop: 2 }}>성벽</div>
         </div>
       </div>
+
+      {hiddenUnlocked.length > 0 && (
+        <>
+          <div style={{ ...S.secTitle, color: '#fde04788' }}>✦ 발견한 유닛</div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
+            {hiddenUnlocked.map(w => {
+              const meta = UNIT_META[w.unit];
+              return (
+                <div key={w.unit} style={{ ...S.unitCard, borderColor: (meta?.color || '#aaa') + '55', background: (meta?.color || '#aaa') + '0d' }}>
+                  <UnitSprite unitId={w.unit} size={32} />
+                  <div style={{ fontSize: 9, color: meta?.color, marginTop: 2 }}>{meta?.label}</div>
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
 
       {playerArmy.length > 0 && (
         <>
@@ -232,40 +272,78 @@ function BattleSidePanel({ playerUnits, playerBuildings }) {
   return (
     <div style={S.sidePanel}>
       <div style={S.secTitle}>내 부대 ({total})</div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 7, overflowY: 'auto', maxHeight: 128 }}>
-        {playerUnits.map((u, i) => {
-          const meta = UNIT_META[u.unitId];
-          return (
-            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-              <UnitSprite unitId={u.unitId} size={28} />
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 10, color: meta?.color || '#aaa', marginBottom: 3 }}>{meta?.label || u.unitId}</div>
-                <HpBar hp={u.hp} maxHp={u.maxHp} color={meta?.color || '#60a5fa'} slim />
+      {total === 0 && <div style={{ fontSize: 11, color: '#333' }}>전멸</div>}
+    </div>
+  );
+}
+
+// ── 유닛 HP 카드 로스터 (빌드/전투 공통) ──────────────────────────────────
+function UnitRoster({ army, playerUnits, playerBuildings, isBattle }) {
+  const items = isBattle
+    ? [
+        ...playerUnits.map(u => {
+          const def = UNIT_DEFS[u.unitId];
+          return { key: `u${u.unitId}`, unitId: u.unitId, hp: u.hp, maxHp: u.maxHp || def?.maxHp || 1 };
+        }),
+        ...playerBuildings.map((b, i) => ({
+          key: `b${i}`, buildingId: b.buildingId, hp: b.hp, maxHp: b.maxHp || 400,
+        })),
+      ]
+    : army.map((item, i) => {
+        if (item.type === 'unit') {
+          const def = UNIT_DEFS[item.unitId];
+          return { key: `u${i}`, unitId: item.unitId, hp: def?.maxHp || 1, maxHp: def?.maxHp || 1 };
+        }
+        const bdef = BUILDING_DEFS[item.buildingId];
+        return { key: `b${i}`, buildingId: item.buildingId, hp: bdef?.maxHp || 400, maxHp: bdef?.maxHp || 400 };
+      });
+
+  if (!items.length) return null;
+
+  return (
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, alignContent: 'flex-start' }}>
+      {items.map(item => {
+        const isBuilding = !!item.buildingId;
+        const color = isBuilding ? '#94a3b8' : (UNIT_META[item.unitId]?.color || '#60a5fa');
+        const label = isBuilding ? '성벽' : (UNIT_META[item.unitId]?.label || item.unitId);
+        const ratio = Math.max(0, item.hp / item.maxHp);
+        const fill  = !isBattle ? color + '55'
+          : ratio > 0.5 ? color : ratio > 0.25 ? '#facc15' : '#ef4444';
+        return (
+          <div key={item.key} style={{
+            display: 'flex', alignItems: 'center', gap: 4,
+            background: color + '0d', border: `1px solid ${color}22`,
+            borderRadius: 4, padding: '3px 6px 3px 3px',
+            minWidth: 78, maxWidth: 110,
+          }}>
+            {isBuilding
+              ? <BuildingSprite buildingId={item.buildingId} size={24} />
+              : <UnitSprite unitId={item.unitId} size={24} />
+            }
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 9, color, marginBottom: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {label}
+              </div>
+              <div style={{ height: 3, background: '#1a1a2a', borderRadius: 2, overflow: 'hidden' }}>
+                <div style={{
+                  width: `${ratio * 100}%`, height: '100%',
+                  background: fill,
+                  transition: isBattle ? 'width 0.25s' : 'none',
+                  borderRadius: 2,
+                }} />
               </div>
             </div>
-          );
-        })}
-        {playerBuildings.map((b, i) => (
-          <div key={`b${i}`} style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-            <div style={{ width: 28, height: 28, border: '1px solid #94a3b830', borderRadius: 3, overflow: 'hidden', background: '#1a1a2a', flexShrink: 0 }}>
-              <BuildingSprite buildingId={b.buildingId} size={28} />
-            </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 10, color: '#94a3b8', marginBottom: 3 }}>성벽</div>
-              <HpBar hp={b.hp} maxHp={b.maxHp} color="#94a3b8" slim />
-            </div>
           </div>
-        ))}
-        {total === 0 && <div style={{ fontSize: 11, color: '#333' }}>전멸</div>}
-      </div>
+        );
+      })}
     </div>
   );
 }
 
 // ── 단어 목록 패널 (테스트용) ───────────────────────────────────────────────
 function WordListPanel({ onClose }) {
-  const unitWords    = BUILD_WORDS.filter(w => w.type === 'unit');
-  const buildingWords = BUILD_WORDS.filter(w => w.type === 'building');
+  const unitWords    = BUILD_WORDS.filter(w => w.type === 'unit' && !w.hidden);
+  const buildingWords = BUILD_WORDS.filter(w => w.type === 'building' && !w.hidden);
   const section = (title, color, items) => (
     <div style={{ marginBottom: 10 }}>
       <div style={{ fontSize: 10, color, fontWeight: 700, letterSpacing: 1.5, marginBottom: 4 }}>{title}</div>
@@ -298,9 +376,8 @@ function WordListPanel({ onClose }) {
       </div>
       {section('── 유닛 소환', '#60a5fa', unitWords)}
       {section('── 건물', '#94a3b8', buildingWords)}
-      {section('── 대유닛 공격', '#f472b6', WEAPON_WORDS.filter(w => w.target === 'unit'))}
-      {section('── 공성', '#d97706', WEAPON_WORDS.filter(w => w.target === 'building'))}
-      {section('── 대성 공격', '#fb923c', WEAPON_WORDS.filter(w => w.target === 'castle'))}
+      {section('── 대유닛 공격', '#60a5fa', WEAPON_WORDS.filter(w => w.target === 'unit'))}
+      {section('── 공성', '#fb923c', WEAPON_WORDS.filter(w => w.target === 'siege'))}
       {section('── 이스터에그', '#a78bfa', EASTER_WORDS)}
     </div>
   );
@@ -318,6 +395,7 @@ export default function GameScreen({ onEnd, multiInfo }) {
     playerArmy: [], playerArmyCount: 0, enemyArmyCount: 0,
     playerHp: 500, playerMaxHp: 500, enemyHp: 500, enemyMaxHp: 500,
     playerUnits: [], playerBuildings: [],
+    spellCooldowns: {},
   });
   const [input, setInput] = useState('');
   const [feedback, setFeedback] = useState(null);
@@ -325,11 +403,23 @@ export default function GameScreen({ onEnd, multiInfo }) {
   const [showWordList, setShowWordList] = useState(false);
   const [killFeed, setKillFeed] = useState([]);
   const killIdRef = useRef(0);
+  const [discovery, setDiscovery] = useState(null); // { unitId, isNew }
+  const sessionDiscoveriesRef = useRef([]); // 이번 판 새로 발견한 히든 유닛
 
   const setStrategy = s => { setStrategyState(s); engineRef.current?.setStrategy(s); };
 
   const onStateChange = useCallback(state => {
-    if (state.phase === 'over') { onEnd(state); return; }
+    if (state.phase === 'over') {
+      onEnd({
+        ...state,
+        sessionDiscoveries: sessionDiscoveriesRef.current.map(uid => ({
+          unitId: uid,
+          label: UNIT_META[uid]?.label || uid,
+          color: UNIT_META[uid]?.color || '#aaa',
+        })),
+      });
+      return;
+    }
     if (state.newKills?.length) {
       const now = Date.now();
       setKillFeed(prev => [
@@ -389,13 +479,19 @@ export default function GameScreen({ onEnd, multiInfo }) {
     return () => clearTimeout(id);
   }, [killFeed]);
 
+  useEffect(() => {
+    if (!discovery) return;
+    const id = setTimeout(() => setDiscovery(null), 2200);
+    return () => clearTimeout(id);
+  }, [discovery]);
+
   const submit = () => {
     const word = input.trim();
     if (!word || composingRef.current) return;
     const result = engineRef.current?.handleInput(word);
 
-    // 멀티플레이: 성공한 입력을 서버로 전송
-    if (result && multiInfo) {
+    // 멀티플레이: 성공한 입력을 서버로 전송 (쿨타임 중인 경우 제외)
+    if (result && result.type !== 'cooldown' && multiInfo) {
       const { socket } = multiInfo;
       const phase = engineRef.current?.phase;
       if (phase === 'build')  socket.sendBuildWord(word);
@@ -405,10 +501,24 @@ export default function GameScreen({ onEnd, multiInfo }) {
     if (result) {
       if (result.type === 'attack') {
         text = `${result.word}  ${result.damage} 피해`;
-        color = result.target === 'castle' ? '#fb923c' : '#f472b6';
+        color = result.target === 'siege' ? '#fb923c' : '#60a5fa';
       } else if (result.type === 'unit') {
         const meta = UNIT_META[result.unit];
-        text = `${meta?.label || result.unit} 소환`;  color = meta?.color || '#4ade80';
+        if (result.hidden) {
+          const discovered = JSON.parse(localStorage.getItem('tcb_discovered') || '[]');
+          const isNew = !discovered.includes(result.unit);
+          if (isNew) {
+            localStorage.setItem('tcb_discovered', JSON.stringify([...discovered, result.unit]));
+            sessionDiscoveriesRef.current = [...new Set([...sessionDiscoveriesRef.current, result.unit])];
+            setDiscovery({ unitId: result.unit, isNew: true }); // 첫 발견만 이펙트 표시
+          }
+          text = isNew ? `✦ ${meta?.label || result.unit} 발견!` : `${meta?.label || result.unit} 소환`;
+          color = '#fde047';
+        } else {
+          text = `${meta?.label || result.unit} 소환`;  color = meta?.color || '#4ade80';
+        }
+      } else if (result.type === 'cooldown') {
+        text = `재충전 중 ${Math.ceil(result.remaining)}s`;  color = '#6b7280';
       } else if (result.type === 'easter') {
         text = '???';  color = '#f472b6';
       } else {
@@ -424,7 +534,7 @@ export default function GameScreen({ onEnd, multiInfo }) {
 
   const { phase, timer, playerArmy, playerArmyCount, enemyArmyCount,
           playerHp, playerMaxHp, enemyHp, enemyMaxHp,
-          playerUnits, playerBuildings } = gs;
+          playerUnits, playerBuildings, spellCooldowns = {} } = gs;
 
   return (
     <div style={S.wrap}>
@@ -446,7 +556,7 @@ export default function GameScreen({ onEnd, multiInfo }) {
         <div style={{ ...S.hudSide, alignItems: 'flex-end' }}>
           {phase === 'battle'
             ? <HpBar label="적군 성" hp={enemyHp} maxHp={enemyMaxHp} color="#f87171" rtl />
-            : <div style={{ color: '#f87171', fontSize: 13, fontWeight: 700 }}>적군 {enemyArmyCount}부대</div>}
+            : <div style={{ color: '#443322', fontSize: 13, fontWeight: 700 }}>적군 ???</div>}
         </div>
       </div>
 
@@ -466,12 +576,37 @@ export default function GameScreen({ onEnd, multiInfo }) {
       {/* 캔버스 + 킬 피드 오버레이 */}
       <div style={{ position: 'relative' }}>
         <canvas ref={canvasRef} style={S.canvas} />
+        {/* 히든 유닛 발견 연출 (첫 발견만) */}
+        {discovery && (() => {
+          const meta = UNIT_META[discovery.unitId];
+          return (
+            <div style={{
+              position: 'absolute', inset: 0, zIndex: 10, pointerEvents: 'none',
+              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+              background: 'rgba(0,0,0,0.6)',
+            }}>
+              <div style={{ fontSize: 10, color: '#fde047', letterSpacing: 5, fontWeight: 700, marginBottom: 10, textShadow: '0 0 12px #fde047' }}>
+                ✦  히든  유닛  발견  ✦
+              </div>
+              <div style={{ filter: 'drop-shadow(0 0 16px #fde047)' }}>
+                <UnitSprite unitId={discovery.unitId} size={72} />
+              </div>
+              <div style={{ fontSize: 26, fontWeight: 900, color: meta?.color || '#fde047', marginTop: 10, textShadow: `0 0 10px ${meta?.color || '#fde047'}` }}>
+                {meta?.label || discovery.unitId}
+              </div>
+              <div style={{ fontSize: 10, color: '#888', marginTop: 8, letterSpacing: 1 }}>도감에 등록되었습니다</div>
+            </div>
+          );
+        })()}
+
         {killFeed.length > 0 && (
           <div style={{ position: 'absolute', top: 8, right: 8, display: 'flex', flexDirection: 'column-reverse', gap: 4, pointerEvents: 'none' }}>
             {killFeed.map(k => {
               const age = (Date.now() - k.ts) / 3000;
               const meta = UNIT_META[k.unitId];
               const sideColor = k.side === 'player' ? '#f87171' : '#60a5fa';
+              const isHidden = k.side === 'enemy' && BUILD_WORDS.find(w => w.unit === k.unitId)?.hidden;
+              const discovered = !isHidden || JSON.parse(localStorage.getItem('tcb_discovered') || '[]').includes(k.unitId);
               return (
                 <div key={k.id} style={{
                   display: 'flex', alignItems: 'center', gap: 6,
@@ -480,8 +615,13 @@ export default function GameScreen({ onEnd, multiInfo }) {
                   border: `1px solid ${sideColor}44`,
                 }}>
                   <span style={{ fontSize: 11, color: sideColor }}>{k.side === 'player' ? '☠' : '✦'}</span>
-                  <UnitSprite unitId={k.unitId} size={18} side={k.side} />
-                  <span style={{ fontSize: 11, color: meta?.color || '#ccc' }}>{meta?.label || k.unitId}</span>
+                  {discovered
+                    ? <UnitSprite unitId={k.unitId} size={18} side={k.side} />
+                    : <div style={{ width: 18, height: 18, background: '#111', border: '1px solid #333', borderRadius: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, color: '#555' }}>?</div>
+                  }
+                  <span style={{ fontSize: 11, color: discovered ? (meta?.color || '#ccc') : '#444' }}>
+                    {discovered ? (meta?.label || k.unitId) : '???'}
+                  </span>
                   <span style={{ fontSize: 9, color: '#555' }}>처치</span>
                 </div>
               );
@@ -500,6 +640,18 @@ export default function GameScreen({ onEnd, multiInfo }) {
 
         {/* 중앙: 입력 */}
         <div style={S.centerCol}>
+
+          {/* 유닛 로스터 — 빌드/전투 공통, 상단 채움 */}
+          <div style={{ flex: 1, overflowY: 'auto', minHeight: 0, paddingBottom: 6 }}>
+            <UnitRoster
+              army={playerArmy}
+              playerUnits={playerUnits}
+              playerBuildings={playerBuildings}
+              isBattle={phase === 'battle'}
+            />
+          </div>
+
+          {/* 마법 칩 / 힌트 */}
           {phase === 'battle' && (
             <div style={S.weaponSection}>
               <div style={S.weaponRow}>
@@ -511,19 +663,9 @@ export default function GameScreen({ onEnd, multiInfo }) {
                 ))}
               </div>
               <div style={S.weaponRow}>
-                <span style={{ fontSize: 10, color: '#d9770699', marginRight: 6, flexShrink: 0 }}>공성</span>
-                {WEAPON_WORDS.filter(w => w.target === 'building').map(w => (
-                  <span key={w.word} style={{ ...S.chip, color: '#d97706', borderColor: '#d9770633' }}>
-                    {w.word}<span style={{ fontSize: 9, color: '#d9770655', marginLeft: 3 }}>{w.damage}</span>
-                  </span>
-                ))}
-              </div>
-              <div style={S.weaponRow}>
-                <span style={{ fontSize: 10, color: '#fb923c99', marginRight: 6, flexShrink: 0 }}>대성</span>
-                {WEAPON_WORDS.filter(w => w.target === 'castle').map(w => (
-                  <span key={w.word} style={{ ...S.chip, color: '#fb923c', borderColor: '#fb923c33' }}>
-                    {w.word}<span style={{ fontSize: 9, color: '#fb923c55', marginLeft: 3 }}>{w.damage}</span>
-                  </span>
+                <span style={{ fontSize: 10, color: '#fb923c99', marginRight: 6, flexShrink: 0 }}>공성</span>
+                {WEAPON_WORDS.filter(w => w.target === 'siege').map(w => (
+                  <SpellChip key={w.word} w={w} color="#fb923c" spellCooldowns={spellCooldowns} />
                 ))}
               </div>
             </div>
@@ -536,6 +678,8 @@ export default function GameScreen({ onEnd, multiInfo }) {
               <span style={{ color: '#94a3b8', fontSize: 12 }}>성벽</span>
             </div>
           )}
+
+          {/* 피드백 + 입력 */}
           <div style={{ height: 20, display: 'flex', alignItems: 'center', marginBottom: 6 }}>
             {feedback && <span style={{ color: feedback.color, fontWeight: 700, fontSize: 12, letterSpacing: 0.5 }}>{feedback.text}</span>}
           </div>
@@ -592,7 +736,7 @@ const S = {
 
   // 하단 패널
   bottom: {
-    display: 'flex', flex: 1, minHeight: 170,
+    display: 'flex', flex: 1, minHeight: 200,
     background: 'linear-gradient(180deg,#0d0a18 0%,#090812 100%)',
     borderTop: '2px solid #1e1428',
   },
@@ -605,12 +749,12 @@ const S = {
 
   centerCol: {
     flex: 1, padding: '12px 20px',
-    display: 'flex', flexDirection: 'column', justifyContent: 'flex-end',
+    display: 'flex', flexDirection: 'column',
   },
 
   stratPanel: {
-    width: 265, minWidth: 265, flexShrink: 0,
-    padding: '12px 16px', borderLeft: '1px solid #140e1e',
+    width: 280, minWidth: 280, flexShrink: 0,
+    padding: '14px 16px', borderLeft: '1px solid #140e1e',
   },
 
   secTitle: {
@@ -647,8 +791,8 @@ const S = {
   },
 
   stratRow: {
-    display: 'flex', alignItems: 'center',
-    justifyContent: 'space-between', marginBottom: 9,
+    display: 'flex', flexDirection: 'column',
+    gap: 5, marginBottom: 10,
   },
-  stratLabel: { fontSize: 11, color: '#4a3322', minWidth: 52, fontWeight: 500 },
+  stratLabel: { fontSize: 10, color: '#7a6040', fontWeight: 700, letterSpacing: 0.5 },
 };

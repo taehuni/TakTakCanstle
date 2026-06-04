@@ -43,7 +43,7 @@ function HeroCanvas() {
   );
 }
 
-export default function MainMenu({ onStart, onMulti }) {
+export default function MainMenu({ onStart, onMulti, onRanked, onCustom, onDogam, onRank, onHowTo, user, onLogin, onLogout }) {
   return (
     <div style={S.page}>
 
@@ -56,11 +56,18 @@ export default function MainMenu({ onStart, onMulti }) {
         </div>
         <div style={S.navCenter}>
           <span style={S.navLink}>게임 소개</span>
-          <span style={S.navLink}>유닛 정보</span>
-          <span style={S.navLink}>기록</span>
+          <span style={S.navLinkActive} onClick={onDogam}>유닛 도감</span>
+          <span style={S.navLinkActive} onClick={onRank}>랭킹</span>
         </div>
         <div style={S.navRight}>
           <span style={S.navCompBadge}>🏆 대건령 공모전 출품작</span>
+          {user
+            ? <>
+                <span style={S.navUser}>👤 {user.displayName}</span>
+                <button style={S.navLogoutBtn} onClick={onLogout}>로그아웃</button>
+              </>
+            : <button style={S.navLoginBtn} onClick={onLogin}>로그인</button>
+          }
           <button style={S.navPlayBtn} onClick={onStart}>바로 플레이</button>
         </div>
       </nav>
@@ -81,8 +88,10 @@ export default function MainMenu({ onStart, onMulti }) {
           </p>
           <div style={S.heroBtns}>
             <button style={S.heroPlayBtn} onClick={onStart}>▶ 싱글 플레이</button>
-            <button style={S.heroPlayBtn} onClick={onMulti}>🌐 온라인 대전</button>
-            <button style={S.heroHowBtn}>게임 방법 보기</button>
+            <button style={S.heroPlayBtn} onClick={onMulti}>🌐 일반 대전</button>
+            <button style={{ ...S.heroPlayBtn, background: 'linear-gradient(135deg,#b45309,#92400e)', boxShadow: '0 4px 32px rgba(180,83,9,0.5)' }} onClick={onRanked}>⚔ 랭크 게임</button>
+            <button style={S.heroCustomBtn} onClick={onCustom}>🎮 커스텀</button>
+            <button style={S.heroHowBtn} onClick={onHowTo}>게임 방법 보기</button>
           </div>
           <div style={S.heroMeta}>
             <span style={S.heroMetaItem}>⌨ 한국어 타자</span>
@@ -129,8 +138,7 @@ export default function MainMenu({ onStart, onMulti }) {
       <div style={S.infoRow}>
         <div style={S.infoBox}>
           <div style={S.sectionEyebrow}>SPELLS</div>
-          <h2 style={{ ...S.sectionTitle, fontSize: 22, marginBottom: 12 }}>혹시 그 단어가...</h2>
-          <p style={S.discoveryLead}>강력한 무기가 될지 모른다.</p>
+          <h2 style={{ ...S.sectionTitle, fontSize: 22, marginBottom: 36 }}>혹시 그 단어가...</h2>
           <div style={S.discoveryCards}>
             {DISCOVERY.map((d, i) => (
               <div key={i} style={{ ...S.discoveryCard, borderColor: d.color + '45', background: d.color + '0c' }}>
@@ -150,7 +158,7 @@ export default function MainMenu({ onStart, onMulti }) {
 
         <div style={S.infoBox}>
           <div style={S.sectionEyebrow}>HOW TO PLAY</div>
-          <h2 style={{ ...S.sectionTitle, fontSize: 22, marginBottom: 20 }}>조작법</h2>
+          <h2 style={{ ...S.sectionTitle, fontSize: 22, marginBottom: 36 }}>조작법</h2>
           <div style={S.controlList}>
             {CONTROLS.map((c, i) => (
               <div key={i} style={S.controlItem}>
@@ -214,7 +222,6 @@ const DISCOVERY = [
 
 const CONTROLS = [
   { key: 'Enter',    color: '#4ade80', title: '소환 / 발동', desc: '단어 입력 후 Enter로 즉시 효과 발동' },
-  { key: '타이핑',  color: '#38bdf8', title: '방어 차단',   desc: '화면에 날아오는 단어를 그대로 입력해 막기' },
   { key: '건설단계', color: '#fbbf24', title: '군대 편성',   desc: '30초 안에 원하는 유닛·성벽을 조합' },
   { key: '전략패널', color: '#c084fc', title: '포지션 설정', desc: '성벽 위치, 근/원거리 진형 자유 조정' },
 ];
@@ -242,9 +249,28 @@ const S = {
   navLogoMark: { fontSize: 22, color: '#fbbf24' },
   navLogoName: { fontSize: 20, fontWeight: 900, color: '#fff', letterSpacing: 1 },
   navLogoSub: { fontSize: 9, color: 'rgba(255,255,255,0.3)', letterSpacing: 4, marginLeft: 4, marginTop: 2 },
-  navCenter: { display: 'flex', gap: 28 },
-  navLink: { fontSize: 13, color: 'rgba(180,210,240,0.55)', cursor: 'pointer', letterSpacing: 0.5 },
-  navRight: { display: 'flex', alignItems: 'center', gap: 14 },
+  navCenter: { display: 'flex', gap: 8 },
+  navLink: { fontSize: 13, color: 'rgba(180,210,240,0.45)', letterSpacing: 0.5, padding: '6px 14px' },
+  navLinkActive: {
+    fontSize: 13, fontWeight: 700, letterSpacing: 0.5, cursor: 'pointer',
+    padding: '7px 18px', borderRadius: 7,
+    color: '#e2e8f8',
+    background: 'rgba(56,189,248,0.12)',
+    border: '1px solid rgba(56,189,248,0.3)',
+    transition: 'all 0.15s',
+  },
+  navRight: { display: 'flex', alignItems: 'center', gap: 10 },
+  navUser: { fontSize: 12, color: 'rgba(180,210,240,0.6)', letterSpacing: 0.3 },
+  navLoginBtn: {
+    padding: '7px 16px', background: 'rgba(124,92,191,0.2)',
+    border: '1px solid rgba(124,92,191,0.4)', borderRadius: 7,
+    color: '#c084fc', fontSize: 12, fontWeight: 700, cursor: 'pointer',
+  },
+  navLogoutBtn: {
+    padding: '7px 14px', background: 'rgba(255,255,255,0.05)',
+    border: '1px solid rgba(255,255,255,0.12)', borderRadius: 7,
+    color: 'rgba(180,210,240,0.5)', fontSize: 12, cursor: 'pointer',
+  },
   navCompBadge: {
     fontSize: 11, color: '#fbbf24', background: 'rgba(251,191,36,0.12)',
     border: '1px solid rgba(251,191,36,0.35)', borderRadius: 20, padding: '4px 12px',
@@ -307,6 +333,13 @@ const S = {
     border: 'none', borderRadius: 10,
     color: '#1a0800', fontSize: 17, fontWeight: 900, cursor: 'pointer',
     letterSpacing: 1, boxShadow: '0 4px 32px rgba(251,191,36,0.5)',
+  },
+  heroCustomBtn: {
+    padding: '16px 44px',
+    background: 'linear-gradient(135deg, #a855f7 0%, #7c3aed 55%, #5b21b6 100%)',
+    border: 'none', borderRadius: 10,
+    color: '#fff', fontSize: 17, fontWeight: 900, cursor: 'pointer',
+    letterSpacing: 1, boxShadow: '0 4px 32px rgba(168,85,247,0.6)',
   },
   heroHowBtn: {
     padding: '16px 36px',
@@ -373,16 +406,12 @@ const S = {
     borderBottom: '1px solid rgba(255,255,255,0.06)',
   },
   infoBox: {
-    padding: '48px 52px',
+    padding: '72px 52px 48px',
     borderRight: '1px solid rgba(255,255,255,0.06)',
     background: 'rgba(0,0,0,0.15)',
   },
 
   /* 마법 발견 */
-  discoveryLead: {
-    fontSize: 20, fontWeight: 700, color: 'rgba(200,225,255,0.8)',
-    margin: '0 0 24px', lineHeight: 1.5,
-  },
   discoveryCards: { display: 'flex', flexDirection: 'column', gap: 10 },
   discoveryCard: {
     display: 'flex', alignItems: 'flex-start', gap: 14,

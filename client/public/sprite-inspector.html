@@ -148,11 +148,12 @@ coordChk.addEventListener('change', () => {
 });
 
 function applyZoom(s) {
-  const img = document.getElementById(s.imgId);
-  const step = s.tileW + s.spacing;
-  const rows = Math.floor(img.naturalHeight / step);
-  const w = s.cols * s.tileW * zoom;
-  const h = rows * s.tileH * zoom;
+  const img  = document.getElementById(s.imgId);
+  const step = s.tileW + (s.spacing || 0);
+  const rows = Math.ceil(img.naturalHeight / step);
+  // 이미지는 naturalWidth * zoom — 실제 픽셀 크기 그대로 확대
+  const w = img.naturalWidth  * zoom;
+  const h = img.naturalHeight * zoom;
   img.style.width  = w + 'px';
   img.style.height = h + 'px';
   ['hover', 'grid'].forEach(prefix => {
@@ -163,6 +164,9 @@ function applyZoom(s) {
     c.style.height = h + 'px';
   });
   s.rows = rows;
+  s.step = step;
+  s.dispW = w;
+  s.dispH = h;
 }
 
 function drawGrid(s) {
@@ -170,24 +174,24 @@ function drawGrid(s) {
   const ctx = canvas.getContext('2d');
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  const tw = s.tileW * zoom;
-  const th = s.tileH * zoom;
+  const sw = s.step * zoom;  // step * zoom (spacing 포함)
+  const sh = s.step * zoom;
 
   ctx.strokeStyle = 'rgba(255,255,255,0.2)';
   ctx.lineWidth = 1;
   for (let r = 0; r <= s.rows; r++) {
-    ctx.beginPath(); ctx.moveTo(0, r * th); ctx.lineTo(canvas.width, r * th); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, r * sh); ctx.lineTo(canvas.width, r * sh); ctx.stroke();
   }
   for (let c = 0; c <= s.cols; c++) {
-    ctx.beginPath(); ctx.moveTo(c * tw, 0); ctx.lineTo(c * tw, canvas.height); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(c * sw, 0); ctx.lineTo(c * sw, canvas.height); ctx.stroke();
   }
 
   if (showCoords && zoom >= 3) {
-    ctx.font = Math.max(7, zoom * 1.5) + 'px monospace';
-    ctx.fillStyle = 'rgba(255,220,0,0.55)';
+    ctx.font = Math.max(7, zoom * 1.8) + 'px monospace';
+    ctx.fillStyle = 'rgba(255,220,0,0.6)';
     for (let r = 0; r < s.rows; r++) {
       for (let c = 0; c < s.cols; c++) {
-        ctx.fillText(r + ',' + c, c * tw + 1, r * th + Math.max(9, zoom * 2));
+        ctx.fillText(r + ',' + c, c * sw + 2, r * sh + Math.max(10, zoom * 2.2));
       }
     }
   }
@@ -197,26 +201,24 @@ function setupHover(s) {
   const wrap  = document.getElementById(s.wrapId);
   const hover = document.getElementById(s.hoverId);
   const img   = document.getElementById(s.imgId);
-  const tw = () => s.tileW * zoom;
-  const th = () => s.tileH * zoom;
+  const sw = () => s.step * zoom;  // step 기준 (spacing 포함)
 
   wrap.addEventListener('mousemove', e => {
     const rect = hover.getBoundingClientRect();
-    const col = Math.floor((e.clientX - rect.left) / tw());
-    const row = Math.floor((e.clientY - rect.top)  / th());
+    const col = Math.floor((e.clientX - rect.left) / sw());
+    const row = Math.floor((e.clientY - rect.top)  / sw());
     if (col < 0 || col >= s.cols || row < 0 || row >= s.rows) return;
 
     const ctx = hover.getContext('2d');
     ctx.clearRect(0, 0, hover.width, hover.height);
 
-    // highlight current tile
+    // 현재 타일 하이라이트
     ctx.strokeStyle = '#ff0';
     ctx.lineWidth = 2;
-    ctx.strokeRect(col * tw() + 1, row * th() + 1, tw() - 2, th() - 2);
+    ctx.strokeRect(col * sw() + 1, row * sw() + 1, s.tileW * zoom - 2, s.tileH * zoom - 2);
 
-    // mini preview (8× scale) at bottom-left
-    const step = s.tileW + s.spacing;
-    const sx = col * step, sy = row * step;
+    // 미리보기 (8× 확대)
+    const sx = col * s.step, sy = row * s.step;
     const pw = s.tileW * 8, ph = s.tileH * 8;
     const px = 4, py = hover.height - ph - 4;
     ctx.clearRect(px - 1, py - 1, pw + 2, ph + 2);
@@ -236,11 +238,13 @@ function setupHover(s) {
 
   wrap.addEventListener('click', e => {
     const rect = hover.getBoundingClientRect();
-    const col = Math.floor((e.clientX - rect.left) / tw());
-    const row = Math.floor((e.clientY - rect.top)  / th());
+    const col = Math.floor((e.clientX - rect.left) / sw());
+    const row = Math.floor((e.clientY - rect.top)  / sw());
     const name = s.imgId.replace('img-', '');
-    console.log(`sheet:'${name === 'addon' ? 'tiny-addon' : 'tiny-dungeon'}', tileRow:${row}, tileCol:${col}`);
-    alert(`복사:\ntileRow: ${row}, tileCol: ${col}`);
+    const sheetName = name === 'addon' ? 'tiny-addon' : name === 'dungeon' ? 'tiny-dungeon' : 'tiny-creatures';
+    console.log(`sheet:'${sheetName}', tileRow:${row}, tileCol:${col}`);
+    navigator.clipboard?.writeText(`tileRow: ${row}, tileCol: ${col}`).catch(()=>{});
+    alert(`복사됨:\ntileRow: ${row}, tileCol: ${col}`);
   });
 }
 

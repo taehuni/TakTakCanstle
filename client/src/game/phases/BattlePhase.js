@@ -20,6 +20,7 @@ const PROJ_COLORS = {
   fire: '#fb923c', lightning: '#fde047', ice: '#67e8f9',
   explosion: '#ef4444', magic: '#c084fc', arrow: '#d4a574',
   holy: '#fef08a', poison: '#86efac',
+  fire_arrow: '#ff6820', fireball: '#ff4500', fire_siege: '#ff5c00',
 };
 
 const mkFx = (x, y, type, timer) => ({ x, y, type, timer, maxTimer: timer });
@@ -45,8 +46,12 @@ export class BattlePhase {
     this.effects      = [];
     this.newKills     = [];
 
-    this.wordsTyped   = 0;
-    this.kills        = 0;
+    this.wordsTyped     = 0;
+    this.kills          = 0;
+    this.spellCooldowns = {};
+
+    this._startedAt   = Date.now();
+    this.aiSpellTimer = 8 + Math.random() * 7; // 첫 마법: 8~15초 후
 
     this.initArmy(army);
   }
@@ -80,7 +85,11 @@ export class BattlePhase {
   }
 
   update(dt) {
-    this.timer -= dt;
+    this.timer = Math.max(0, 120 - (Date.now() - this._startedAt) / 1000);
+
+    for (const w of Object.keys(this.spellCooldowns)) {
+      this.spellCooldowns[w] = Math.max(0, this.spellCooldowns[w] - dt);
+    }
 
     // ── aura 버프 매 프레임 초기화 후 재적용 ──────
     [...this.playerUnits, ...this.enemyUnits].forEach(u => { u.speedBuff = 1; u.atkBuff = 1; });
@@ -145,17 +154,33 @@ export class BattlePhase {
 
     this.effects = this.effects.filter(e => (e.timer -= dt) > 0);
 
+    // AI 마법 (싱글플레이어 전용)
+    if (!this.engine.multiSide) {
+      this.aiSpellTimer -= dt;
+      if (this.aiSpellTimer <= 0) {
+        this._castAiSpell();
+        this.aiSpellTimer = 8 + Math.random() * 12; // 다음 마법: 8~20초 후
+      }
+    }
+
     this.playerCastle.hp = Math.max(0, this.playerCastle.hp);
     this.enemyCastle.hp  = Math.max(0, this.enemyCastle.hp);
 
     if (this.enemyCastle.hp <= 0) this.engine.endGame('player');
-    else if (this.playerCastle.hp <= 0 || this.timer <= 0) this.engine.endGame('enemy');
+    else if (this.playerCastle.hp <= 0) this.engine.endGame('enemy');
+    else if (this.timer <= 0) {
+      // 시간 종료: HP가 더 높은 쪽이 승리
+      this.engine.endGame(this.playerCastle.hp >= this.enemyCastle.hp ? 'player' : 'enemy');
+    }
   }
 
   handleInput(word) {
     // 무기 단어
     const wep = WEAPON_WORDS.find(w => w.word === word);
     if (wep) {
+      if (wep.cooldown != null && (this.spellCooldowns[word] || 0) > 0) {
+        return { type: 'cooldown', word, remaining: this.spellCooldowns[word] };
+      }
       const { damage, effect, target } = wep;
 
       if (target === 'unit') {
@@ -181,17 +206,16 @@ export class BattlePhase {
           this.effects.push(mkFx(ENEMY_CASTLE_X - 30, UNIT_Y - 50, effect, 0.5));
         }
 
-      } else if (target === 'building') {
-        // ── 대건물: 적 성벽 집중 타격 ──
+      } else if (target === 'siege') {
+        // ── 공성: 성벽 있으면 성벽, 없으면 성 직격 ──
         const aliveWalls = this.enemyBuildings.filter(b => !b.dead);
         if (aliveWalls.length > 0) {
-          // 플레이어 쪽에서 가장 가까운 적 성벽 (x 최소)
           const tgt = aliveWalls.reduce((a, b) => a.x < b.x ? a : b);
           this.projectiles.push(new Projectile({
             x: PLAYER_SPAWN_X, y: UNIT_Y - 50,
             targetX: tgt.x, targetY: tgt.y - 48,
-            speed: 280,
-            color: PROJ_COLORS[effect] || '#d97706', type: effect,
+            speed: 320,
+            color: PROJ_COLORS[effect] || '#fff', type: effect,
             onHit: () => {
               if (!tgt.dead) {
                 tgt.hp -= damage;
@@ -200,27 +224,16 @@ export class BattlePhase {
               }
             },
           }));
-        } else {
-          // 성벽 없으면 성에 30% 피해
-          this.enemyCastle.hp -= Math.floor(damage * 0.3);
-          this.effects.push(mkFx(ENEMY_CASTLE_X - 30, UNIT_Y - 50, effect, 0.5));
-        }
-
-      } else {
-        // ── 대성: 번개는 즉발, 나머지는 투사체 ──
-        if (effect === 'lightning') {
+        } else if (effect === 'lightning') {
           this.enemyCastle.hp -= damage;
           this.effects.push(mkFx(ENEMY_CASTLE_X - 30, UNIT_Y - 60, 'lightning', 0.6));
           this.effects.push(mkFx(ENEMY_CASTLE_X - 30, UNIT_Y - 60, 'explosion', 0.4));
         } else {
           this.projectiles.push(new Projectile({
-            x: 100,
-            y: UNIT_Y - 30 - Math.random() * 20,
-            targetX: ENEMY_CASTLE_X - 30,
-            targetY: UNIT_Y - 50,
+            x: 100, y: UNIT_Y - 30 - Math.random() * 20,
+            targetX: ENEMY_CASTLE_X - 30, targetY: UNIT_Y - 50,
             speed: 380 + Math.random() * 80,
-            color: PROJ_COLORS[effect] || '#fff',
-            type: effect,
+            color: PROJ_COLORS[effect] || '#fff', type: effect,
             onHit: () => {
               this.enemyCastle.hp -= damage;
               this.effects.push(mkFx(ENEMY_CASTLE_X - 30, UNIT_Y - 50, effect, 0.7));
@@ -229,6 +242,7 @@ export class BattlePhase {
         }
       }
 
+      if (wep.cooldown != null) this.spellCooldowns[word] = wep.cooldown;
       this.wordsTyped++;
       return { type: 'attack', word, damage, target };
     }
@@ -267,16 +281,35 @@ export class BattlePhase {
     return false;
   }
 
+  _castAiSpell() {
+    const hasUnits     = this.playerUnits.filter(u => !u.dead).length > 0;
+    const hasBuildings = this.playerBuildings.filter(b => !b.dead).length > 0;
+
+    const roll = Math.random();
+    let pool;
+    if (roll < 0.65 && hasUnits) {
+      pool = WEAPON_WORDS.filter(w => w.target === 'unit');
+    } else {
+      pool = WEAPON_WORDS.filter(w => w.target === 'siege');
+    }
+
+    const spell = pool[Math.floor(Math.random() * pool.length)];
+    if (spell) this.handleEnemyInput(spell.word);
+  }
+
   // 유닛 전투 투사체 추가
   addCombatProjectile({ fromX, fromY, toX, toY, unitId, side, color, onHit }) {
     const typeMap = {
       archer: 'arrow', crossbowman: 'arrow', venom_archer: 'arrow',
-      wizard: 'magic', lich: 'magic', shaman: 'magic',
+      wizard: 'arcane',
+      lich: 'dark_magic',
+      shaman: 'curse',
       catapult: 'explosion',
       priest: 'holy', paladin: 'holy',
     };
     const type = typeMap[unitId] || 'arrow';
-    const speed = unitId === 'catapult' ? 110 : (unitId === 'wizard' || unitId === 'lich') ? 220 : 280;
+    const speed = unitId === 'catapult' ? 110
+      : (unitId === 'wizard' || unitId === 'lich' || unitId === 'shaman') ? 220 : 280;
 
     const wrappedOnHit = () => {
       onHit?.();
@@ -284,6 +317,12 @@ export class BattlePhase {
         this.effects.push(mkFx(toX, toY - 10, 'arrow_hit', 0.4));
       } else if (type === 'holy') {
         this.effects.push(mkFx(toX, toY - 20, 'holy', 0.7));
+      } else if (type === 'arcane') {
+        this.effects.push(mkFx(toX, toY - 10, 'arcane', 0.55));
+      } else if (type === 'dark_magic') {
+        this.effects.push(mkFx(toX, toY - 10, 'dark_magic', 0.55));
+      } else if (type === 'curse') {
+        this.effects.push(mkFx(toX, toY - 10, 'curse', 0.55));
       }
     };
 
@@ -322,15 +361,15 @@ export class BattlePhase {
           this.playerCastle.hp -= Math.floor(damage * 0.5);
         }
 
-      } else if (target === 'building') {
+      } else if (target === 'siege') {
         const aliveWalls = this.playerBuildings.filter(b => !b.dead);
         if (aliveWalls.length > 0) {
           const tgt = aliveWalls.reduce((a, b) => a.x > b.x ? a : b);
           this.projectiles.push(new Projectile({
             x: ENEMY_SPAWN_X, y: UNIT_Y - 50,
             targetX: tgt.x, targetY: tgt.y - 48,
-            speed: 280,
-            color: PROJ_COLORS[effect] || '#d97706', type: effect,
+            speed: 320,
+            color: PROJ_COLORS[effect] || '#fff', type: effect,
             onHit: () => {
               if (!tgt.dead) {
                 tgt.hp -= damage;
@@ -339,13 +378,7 @@ export class BattlePhase {
               }
             },
           }));
-        } else {
-          this.playerCastle.hp -= Math.floor(damage * 0.3);
-        }
-
-      } else {
-        // 대성: 내 성 직격
-        if (effect === 'lightning') {
+        } else if (effect === 'lightning') {
           this.playerCastle.hp -= damage;
           this.effects.push(mkFx(PLAYER_CASTLE_X + 30, UNIT_Y - 60, 'lightning', 0.6));
         } else {

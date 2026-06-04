@@ -71,15 +71,21 @@ button { font-family: inherit; }
 
 .btn-ghost {
   padding: 13px 36px;
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.1); border-radius: 10px;
-  color: #555; font-size: 16px; cursor: pointer;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.2); border-radius: 10px;
+  color: #aaa; font-size: 16px; cursor: pointer;
   transition: border-color 0.2s, color 0.2s;
 }
-.btn-ghost:hover { border-color: rgba(255,255,255,0.22); color: #888; }
+.btn-ghost:hover { border-color: rgba(255,255,255,0.38); color: #ddd; }
 
-.anim-1 { animation: fadeInUp 0.45s ease-out 0.05s both; }
-.anim-2 { animation: fadeInUp 0.45s ease-out 0.15s both; }
-.anim-3 { animation: fadeInUp 0.45s ease-out 0.25s both; }
-.anim-4 { animation: fadeInUp 0.45s ease-out 0.35s both; }
+.anim-1  { animation: fadeInUp 0.45s ease-out 0.05s both; }
+.anim-2  { animation: fadeInUp 0.45s ease-out 0.15s both; }
+.anim-2b { animation: fadeInUp 0.45s ease-out 0.20s both; }
+.anim-3  { animation: fadeInUp 0.45s ease-out 0.25s both; }
+.anim-4  { animation: fadeInUp 0.45s ease-out 0.35s both; }
 .anim-win { animation: winPop 0.5s cubic-bezier(.34,1.56,.64,1) both; }
+
+@keyframes pulse {
+  0%,100% { opacity: 1;   transform: scale(1);    }
+  50%     { opacity: 0.4; transform: scale(0.75); }
+}

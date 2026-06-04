@@ -1,8 +1,22 @@
 import { useState, useEffect, useRef } from 'react';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { auth } from './firebase.js';
 import MainMenu from './components/MainMenu.jsx';
 import GameScreen from './components/GameScreen.jsx';
 import ResultScreen from './components/ResultScreen.jsx';
 import MatchmakingScreen from './components/MatchmakingScreen.jsx';
+import DogamScreen from './components/DogamScreen.jsx';
+import RankScreen from './components/RankScreen.jsx';
+import AuthScreen from './components/AuthScreen.jsx';
+import CustomRoomScreen from './components/CustomRoomScreen.jsx';
+import HowToPlayModal from './components/HowToPlayModal.jsx';
+import LiveRankSidebar from './components/LiveRankSidebar.jsx';
+import { submitScore, getUserRank, updateUserRank, calcLpChange } from './data/rankService.js';
+
+function calcScore(stats, won) {
+  const base = (stats.wpm || 0) * 2 + (stats.wordsTyped || 0) * 4 + (stats.kills || 0) * 3;
+  return Math.round(base + (won ? 50 : 0));
+}
 
 // ── 대각선 픽셀 캐릭터 배경 ──────────────────────────────
 function PatternBackground() {
@@ -90,15 +104,118 @@ function PatternBackground() {
 
 // ────────────────────────────────────────────────────────
 export default function App() {
-  const [screen, setScreen]     = useState('menu');
-  const [gameKey, setGameKey]   = useState(0);
-  const [result, setResult]     = useState(null);
-  const [multiInfo, setMultiInfo] = useState(null); // { socket, side }
+  const [screen, setScreen]       = useState('menu');
+  const [gameKey, setGameKey]     = useState(0);
+  const [result, setResult]       = useState(null);
+  const [multiInfo, setMultiInfo] = useState(null);
+  const [user, setUser]           = useState(undefined);
+  const [showAuth, setShowAuth]     = useState(false);
+  const [showHowTo, setShowHowTo]   = useState(false);
+  const [rematchStatus, setRematchStatus] = useState(null); // null | 'waiting' | 'opponent_ready' | 'disconnected'
+  const pendingAction             = useRef(null);
+  const bgmRef                    = useRef(null);
 
-  const goGame      = () => { setGameKey(k => k + 1); setScreen('game'); };
-  const goMulti     = () => { setScreen('matchmaking'); };
+  // BGM: 첫 클릭 시 재생 (브라우저 autoplay 정책 대응)
+  useEffect(() => {
+    const bgm = new Audio('/assets/sound/(LOOP-READY) Track 8 - Upper Quarter_3.mp3');
+    bgm.loop   = true;
+    bgm.volume = 0.35;
+    bgmRef.current = bgm;
+    const start = () => { bgm.play().catch(() => {}); document.removeEventListener('click', start); };
+    document.addEventListener('click', start);
+    return () => { bgm.pause(); document.removeEventListener('click', start); };
+  }, []);
+
+  useEffect(() => {
+    return onAuthStateChanged(auth, u => {
+      setUser(u);
+      if (u) {
+        setShowAuth(false);
+        if (pendingAction.current) {
+          pendingAction.current();
+          pendingAction.current = null;
+        }
+      }
+    });
+  }, []);
+
+  const requireAuth = (action) => {
+    if (user) { action(); return; }
+    pendingAction.current = action;
+    setShowAuth(true);
+  };
+
+  const playerName = user?.displayName || '익명';
+
+  const [matchMode, setMatchMode] = useState('normal'); // 'normal' | 'ranked'
+
+  const goGame      = () => requireAuth(() => { setGameKey(k => k + 1); setScreen('game'); });
+  const goMulti     = () => requireAuth(() => { setMatchMode('normal'); setScreen('matchmaking'); });
+  const goRanked    = () => requireAuth(() => { setMatchMode('ranked'); setScreen('matchmaking'); });
+  const goCustom    = () => requireAuth(() => setScreen('custom'));
+  const goDogam     = () => { setScreen('dogam'); };
+  const goRank      = () => { setScreen('rank'); };
   const onMatched   = (info) => { setMultiInfo(info); setGameKey(k => k + 1); setScreen('game'); };
-  const handleEnd   = (r) => { setResult(r); setScreen('result'); };
+  const handleEnd   = async (r) => {
+    const won   = r.winner === 'player';
+    const score = calcScore(r.stats || {}, won);
+    const isRanked = multiInfo?.mode === 'ranked';
+
+    // 즉시 결과 화면으로 전환 (검은 화면 방지)
+    setResult({ ...r, score, lpChange: null, newLp: null, isRanked });
+    setRematchStatus(null);
+    setScreen('result');
+
+    // LP 갱신은 백그라운드에서 처리 후 결과 화면 업데이트
+    if (isRanked && user?.uid) {
+      try {
+        const rankData = await getUserRank(user.uid).catch(() => ({ lp: 0 }));
+        const myLp  = rankData.lp || 0;
+        const oppLp = multiInfo?.opponentLp ?? myLp;
+        const lpChange = calcLpChange(myLp, oppLp, won);
+        const newLp = await updateUserRank(user.uid, playerName, lpChange, won);
+        setResult(prev => ({ ...prev, lpChange, newLp }));
+      } catch (e) {
+        console.error('[LP 업데이트 실패]', e);
+      }
+    } else if (!isRanked) {
+      submitScore({ uid: user?.uid, name: playerName, score, won, ...r.stats }).catch(() => {});
+    }
+  };
+
+  const handleReplay = () => {
+    if (multiInfo) {
+      multiInfo.socket.emit('rematch_request');
+      setRematchStatus('waiting');
+    } else {
+      goGame();
+    }
+  };
+
+  // 결과 화면에서 멀티플레이 재매칭 소켓 리스너
+  useEffect(() => {
+    if (!multiInfo || screen !== 'result') return;
+    const { socket } = multiInfo;
+
+    const onReady = () => {
+      setRematchStatus(null);
+      setGameKey(k => k + 1);
+      setScreen('game');
+    };
+    const onOpponentWants = () => {
+      setRematchStatus(s => s === 'waiting' ? 'waiting' : 'opponent_ready');
+    };
+    const onDisconnected = () => setRematchStatus('disconnected');
+
+    socket.on('rematch_ready',          onReady);
+    socket.on('opponent_wants_rematch', onOpponentWants);
+    socket.on('opponent_disconnected',  onDisconnected);
+    return () => {
+      socket.off('rematch_ready',          onReady);
+      socket.off('opponent_wants_rematch', onOpponentWants);
+      socket.off('opponent_disconnected',  onDisconnected);
+    };
+  }, [multiInfo, screen]);
 
   return (
     <div style={{
@@ -118,10 +235,20 @@ export default function App() {
         position: 'relative',
         zIndex: 1,
       }}>
-        {screen === 'menu'        && <MainMenu onStart={goGame} onMulti={goMulti} />}
-        {screen === 'matchmaking' && <MatchmakingScreen onMatched={onMatched} onBack={() => setScreen('menu')} />}
-        {screen === 'game'        && <GameScreen key={gameKey} onEnd={handleEnd} multiInfo={multiInfo} />}
-        {screen === 'result'      && <ResultScreen result={result} onReplay={goGame} onMenu={() => setScreen('menu')} />}
+        {user === undefined
+          ? <div style={{ color: '#555', fontSize: 14 }}>로딩 중...</div>
+          : <>
+              {screen === 'menu'        && <><MainMenu onStart={goGame} onMulti={goMulti} onRanked={goRanked} onCustom={goCustom} onDogam={goDogam} onRank={goRank} onHowTo={() => setShowHowTo(true)} user={user} onLogin={() => setShowAuth(true)} onLogout={() => signOut(auth)} /><LiveRankSidebar /></>}
+              {screen === 'matchmaking' && <MatchmakingScreen onMatched={onMatched} onBack={() => setScreen('menu')} mode={matchMode} userId={user?.uid} />}
+              {screen === 'game'        && <GameScreen key={gameKey} onEnd={handleEnd} multiInfo={multiInfo} />}
+              {screen === 'result'      && <ResultScreen result={result} onReplay={handleReplay} onMenu={() => setScreen('menu')} onDogam={goDogam} onRank={goRank} rematchStatus={rematchStatus} isMulti={!!multiInfo} />}
+              {screen === 'custom'      && <CustomRoomScreen onMatched={onMatched} onBack={() => setScreen('menu')} />}
+              {screen === 'dogam'       && <DogamScreen onBack={() => setScreen('menu')} />}
+              {screen === 'rank'        && <RankScreen onBack={() => setScreen('menu')} currentUid={user?.uid} />}
+              {showAuth  && <AuthScreen onClose={() => setShowAuth(false)} />}
+              {showHowTo && <HowToPlayModal onClose={() => setShowHowTo(false)} />}
+            </>
+        }
       </div>
     </div>
   );

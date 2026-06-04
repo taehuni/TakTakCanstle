@@ -1,4 +1,4 @@
-export default function ResultScreen({ result, onReplay, onMenu }) {
+export default function ResultScreen({ result, onReplay, onMenu, onDogam, onRank, rematchStatus, isMulti }) {
   if (!result) return null;
   const won  = result.winner === 'player';
   const { stats } = result;
@@ -20,6 +20,34 @@ export default function ResultScreen({ result, onReplay, onMenu }) {
           <div style={S.gradeLabel}>{grade.label}</div>
         </div>
 
+        {/* LP 변동 (랭크 게임) */}
+        {result.isRanked && result.lpChange != null && (
+          <div className="anim-2b" style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: 10, color: '#b45309', letterSpacing: 3, marginBottom: 4 }}>RANKED · LP</div>
+            <div style={{ fontSize: 48, fontWeight: 900, lineHeight: 1,
+              color: result.lpChange >= 0 ? '#4ade80' : '#f87171',
+              textShadow: `0 0 24px ${result.lpChange >= 0 ? '#4ade8088' : '#f8717188'}` }}>
+              {result.lpChange >= 0 ? '+' : ''}{result.lpChange}
+            </div>
+            {result.newLp != null && (
+              <div style={{ fontSize: 13, color: '#6b6080', marginTop: 4 }}>
+                현재 {result.newLp} LP
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* 점수 (일반 게임) */}
+        {!result.isRanked && result.score != null && (
+          <div className="anim-2b" style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: 10, color: '#2e2550', letterSpacing: 3, marginBottom: 4 }}>SCORE</div>
+            <div style={{ fontSize: 42, fontWeight: 900, color: '#fde047', lineHeight: 1, textShadow: '0 0 20px #fde04788' }}>
+              {result.score}
+              <span style={{ fontSize: 14, color: '#6b6080', marginLeft: 4 }}>pts</span>
+            </div>
+          </div>
+        )}
+
         {/* 스탯 */}
         <div className="anim-3" style={S.grid}>
           <StatCard label="입력 단어"  value={stats.wordsTyped}  unit="개" color="#c084fc" />
@@ -28,10 +56,56 @@ export default function ResultScreen({ result, onReplay, onMenu }) {
           <StatCard label="적 처치"    value={stats.kills}        unit="킬" color="#f87171" />
         </div>
 
+        {/* 히든 유닛 발견 */}
+        {result.sessionDiscoveries?.length > 0 && (
+          <div className="anim-4" style={S.discoverySection}>
+            <div style={S.discoveryTitle}>✦ 이번 판 발견한 히든 유닛</div>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center' }}>
+              {result.sessionDiscoveries.map(d => (
+                <span key={d.unitId} style={{
+                  fontSize: 13, padding: '4px 12px', borderRadius: 4,
+                  background: d.color + '18', border: `1px solid ${d.color}55`,
+                  color: d.color, fontWeight: 700, letterSpacing: 0.5,
+                }}>
+                  {d.label}
+                </span>
+              ))}
+            </div>
+            <div style={{ fontSize: 10, color: '#2e2550', marginTop: 4, letterSpacing: 1 }}>도감에 등록됨</div>
+          </div>
+        )}
+
         {/* 버튼 */}
-        <div className="anim-4" style={S.btns}>
-          <button className="btn-action" onClick={onReplay}>다시하기</button>
-          <button className="btn-ghost"  onClick={onMenu}>메인메뉴</button>
+        <div className="anim-4" style={{ ...S.btns, flexDirection: 'column', alignItems: 'center', gap: 10 }}>
+          {/* 재매칭 상태 (멀티플레이) */}
+          {isMulti && rematchStatus === 'disconnected' && (
+            <div style={S.rematchMsg}>상대가 나갔습니다</div>
+          )}
+          {isMulti && rematchStatus === 'waiting' && (
+            <div style={S.rematchWaiting}>상대방 기다리는 중...</div>
+          )}
+          {isMulti && rematchStatus === 'opponent_ready' && (
+            <div style={S.rematchOpponent}>상대방이 재도전을 원합니다!</div>
+          )}
+
+          <div style={{ display: 'flex', gap: 12 }}>
+            {!result.isRanked && rematchStatus !== 'disconnected' && (
+              <button
+                className="btn-action"
+                onClick={onReplay}
+                disabled={rematchStatus === 'waiting'}
+                style={{
+                  opacity: rematchStatus === 'waiting' ? 0.45 : 1,
+                  boxShadow: rematchStatus === 'opponent_ready' ? '0 0 16px #7c5cbfaa' : undefined,
+                }}
+              >
+                {rematchStatus === 'waiting' ? '기다리는 중...' : '다시하기'}
+              </button>
+            )}
+            <button className="btn-ghost" onClick={onMenu}>메인메뉴</button>
+            {onDogam && <button className="btn-ghost" onClick={onDogam} style={{ borderColor: '#fde04755', color: '#fde047' }}>유닛 도감</button>}
+            {onRank  && <button className="btn-ghost" onClick={onRank}  style={{ borderColor: '#60a5fa55', color: '#60a5fa' }}>랭킹</button>}
+          </div>
         </div>
       </div>
     </div>
@@ -82,7 +156,7 @@ const S = {
 
   gradeWrap: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 },
   gradeLetter: { fontSize: 72, fontWeight: 900, lineHeight: 1 },
-  gradeLabel:  { fontSize: 12, color: '#2e2550', letterSpacing: 2 },
+  gradeLabel:  { fontSize: 12, color: '#7060a0', letterSpacing: 2 },
 
   grid: {
     display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, width: '100%',
@@ -92,8 +166,21 @@ const S = {
     borderRadius: 10, padding: '16px 8px', textAlign: 'center',
   },
   statValue: { fontSize: 30, fontWeight: 900, lineHeight: 1 },
-  statUnit:  { fontSize: 10, color: '#2e2550', marginTop: 2, letterSpacing: 1 },
-  statLabel: { fontSize: 11, color: '#2a2440', marginTop: 6 },
+  statUnit:  { fontSize: 10, color: '#7060a0', marginTop: 2, letterSpacing: 1 },
+  statLabel: { fontSize: 11, color: '#8878b8', marginTop: 6 },
 
   btns: { display: 'flex', gap: 12 },
+  rematchMsg:      { fontSize: 13, color: '#f87171', fontWeight: 700, letterSpacing: 1 },
+  rematchWaiting:  { fontSize: 13, color: '#94a3b8', letterSpacing: 1 },
+  rematchOpponent: { fontSize: 13, color: '#fde047', fontWeight: 700, letterSpacing: 0.5, textShadow: '0 0 10px #fde04788' },
+
+  discoverySection: {
+    width: '100%', textAlign: 'center',
+    padding: '16px 0 4px',
+    borderTop: '1px solid #1e1630',
+  },
+  discoveryTitle: {
+    fontSize: 10, color: '#fde047', fontWeight: 700,
+    letterSpacing: 3, textTransform: 'uppercase', marginBottom: 10,
+  },
 };

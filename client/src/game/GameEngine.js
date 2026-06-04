@@ -19,6 +19,7 @@ export class GameEngine {
     this.lastTime = 0;
     this.stateTimer = 0;
     this.strategy = { wallPos: 'mid', meleeMode: 'advance', rangedMode: 'advance' };
+    this._pendingEnemyBuilds = [];
   }
 
   setStrategy(strategy) {
@@ -34,8 +35,16 @@ export class GameEngine {
   // 상대방 빌드 단어 처리
   handleEnemyBuild(word) {
     if (this.phase !== 'build') return;
+    if (!this.buildPhase) {
+      // 스프라이트 로딩 중 도착한 단어는 큐에 보관
+      this._pendingEnemyBuilds.push(word);
+      return;
+    }
+    this._spawnEnemyBuild(word);
+  }
+
+  _spawnEnemyBuild(word) {
     const { BUILD_WORDS } = this.buildPhase.constructor;
-    // BuildPhase에서 직접 enemy spawn
     const match = BUILD_WORDS?.find(w => w.word === word);
     if (match) this.buildPhase.spawn('enemy', match);
   }
@@ -48,6 +57,11 @@ export class GameEngine {
 
   async start() {
     this.destroyed = false;
+    // 탭이 다시 활성화될 때 rAF dt 점프 방지
+    this._visHandler = () => {
+      if (!document.hidden) this.lastTime = performance.now();
+    };
+    document.addEventListener('visibilitychange', this._visHandler);
     await this.spriteCache.preloadSheets();
     if (this.destroyed) return;
     // 개별 PNG 방식 스프라이트 미리 로드
@@ -68,6 +82,9 @@ export class GameEngine {
     this.buildPhase = new BuildPhase(this);
     if (this.multiSide) this.buildPhase.aiEnabled = false;
     this.buildPhase.start();
+    // 로딩 중 큐에 쌓인 상대방 빌드 단어 처리
+    for (const word of this._pendingEnemyBuilds) this._spawnEnemyBuild(word);
+    this._pendingEnemyBuilds = [];
     this.emit();
     this.raf = requestAnimationFrame(this.loop.bind(this));
   }
@@ -121,6 +138,7 @@ export class GameEngine {
         playerUnits: b.playerUnits.map(u => ({ unitId: u.unitId, hp: u.hp, maxHp: u.maxHp })),
         playerBuildings: b.playerBuildings.map(bl => ({ buildingId: bl.buildingId, hp: bl.hp, maxHp: bl.maxHp })),
         newKills: b.newKills.splice(0),
+        spellCooldowns: { ...b.spellCooldowns },
       });
     }
   }
@@ -158,5 +176,6 @@ export class GameEngine {
   destroy() {
     this.destroyed = true;
     if (this.raf) cancelAnimationFrame(this.raf);
+    if (this._visHandler) document.removeEventListener('visibilitychange', this._visHandler);
   }
 }

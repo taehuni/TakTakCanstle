@@ -264,7 +264,7 @@ export class Unit {
             timer: this.abilityData?.curseDuration || 5,
             source: 'shaman',
           });
-          battle.effects.push({ x: unitTarget.x, y: unitTarget.y - 20, type: 'magic', timer: 0.5, maxTimer: 0.5 });
+          battle.effects.push({ x: unitTarget.x, y: unitTarget.y - 20, type: 'curse', timer: 0.5, maxTimer: 0.5 });
         }
       }
       if (isRanged && unitTarget) {
@@ -340,6 +340,14 @@ export class Unit {
 
       return actual;
     };
+
+    if (!isRanged && unitTarget && !unitTarget.dead) {
+      battle.effects.push({
+        x: unitTarget.x, y: unitTarget.y - 20,
+        type: 'slash', timer: 0.38, maxTimer: 0.38,
+        flip: this.side === 'enemy',
+      });
+    }
 
     if (isRanged) {
       const toX = unitTarget ? unitTarget.x : (building ? building.x : castleX);

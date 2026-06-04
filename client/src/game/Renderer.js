@@ -14,12 +14,16 @@ const EFFECT_COLORS = {
   ice: '#67e8f9', explosion: '#f87171', magic: '#c084fc',
   egg: '#facc15', heart: '#f472b6',
   holy: '#fef08a', poison: '#86efac', heal: '#4ade80',
+  fire_arrow: '#ff6820', fireball: '#ff4500', fire_siege: '#ff5c00',
+  arcane: '#fbbf24', dark_magic: '#7c3aed', curse: '#818cf8',
 };
 
 const PROJ_COLORS = {
   fire: '#fb923c', lightning: '#fde047', ice: '#67e8f9',
   explosion: '#ef4444', magic: '#c084fc', arrow: '#d4a574',
   egg: '#facc15', holy: '#fef08a', poison: '#86efac',
+  fire_arrow: '#ff6820', fireball: '#ff4500', fire_siege: '#ff5c00',
+  arcane: '#fbbf24', dark_magic: '#7c3aed', curse: '#818cf8',
 };
 
 function roundRect(ctx, x, y, w, h, r) {
@@ -46,7 +50,7 @@ export class Renderer {
     this.drawCastle('enemy');
     this.drawWallIndicator(strategy);
     this.drawBuildArmy(phase.playerArmy, 'player', strategy);
-    this.drawBuildArmy(phase.enemyArmy, 'enemy', strategy);
+    this.drawBuildArmy(phase.enemyArmy, 'enemy', strategy, true);
     this.drawArmyBadge(phase.playerArmy.length, phase.enemyArmy.length);
   }
 
@@ -245,7 +249,7 @@ export class Renderer {
   }
 
   // 건설 페이즈: 타입한 유닛을 성 옆에 줄 세워서 표시
-  drawBuildArmy(army, side, strategy = {}) {
+  drawBuildArmy(army, side, strategy = {}, silhouette = false) {
     const isP = side === 'player';
     const pos = WALL_POS[strategy.wallPos] || WALL_POS.mid;
     const wallX = isP ? pos.player : pos.enemy;
@@ -257,7 +261,7 @@ export class Renderer {
         const row = Math.floor(unitIdx / 14);
         const x = isP ? 115 + col * 19 : 1085 - col * 19;
         const y = UNIT_Y - row * 26;
-        this.drawMiniUnit(def.unitId, side, x, y);
+        this.drawMiniUnit(def.unitId, side, x, y, silhouette);
         unitIdx++;
       } else {
         const bdef = BUILDING_DEFS[def.buildingId];
@@ -300,7 +304,7 @@ export class Renderer {
     return true;
   }
 
-  drawMiniUnit(unitId, side, x, y) {
+  drawMiniUnit(unitId, side, x, y, silhouette = false) {
     const def = UNIT_DEFS[unitId];
     if (!def) return;
     const w = def.size * 2, h = def.size * 2;
@@ -308,6 +312,12 @@ export class Renderer {
     const color = side === 'player' ? def.color : def.enemyColor;
     const ctx = this.ctx;
     const flip = side === 'enemy';
+
+    if (silhouette) {
+      ctx.save();
+      ctx.filter = 'brightness(0)';
+      ctx.globalAlpha = 0.65;
+    }
 
     // 캐릭터 그리기
     const directSrc = flip ? (def.enemySprite || def.sprite) : def.sprite;
@@ -333,14 +343,20 @@ export class Renderer {
       drawn = this.drawTile(def.sheet, def.tileRow, def.tileCol, bx, by, w, h, flip);
     }
     if (!drawn) {
-      ctx.fillStyle = color;
+      ctx.fillStyle = silhouette ? '#111' : color;
       ctx.fillRect(bx, by, w, h);
-      ctx.fillStyle = 'rgba(0,0,0,0.3)';
-      ctx.fillRect(bx + w * 0.25, by + 2, w * 0.5, h * 0.38);
+      if (!silhouette) {
+        ctx.fillStyle = 'rgba(0,0,0,0.3)';
+        ctx.fillRect(bx + w * 0.25, by + 2, w * 0.5, h * 0.38);
+      }
     }
 
-    // 무기는 항상 캐릭터 위에 그림
-    this.drawWeapon(def.weaponSheet, def.weaponRow, def.weaponCol, bx, by, w, h, flip);
+    if (silhouette) {
+      ctx.restore();
+    } else {
+      // 무기는 실루엣 모드가 아닐 때만 그림
+      this.drawWeapon(def.weaponSheet, def.weaponRow, def.weaponCol, bx, by, w, h, flip);
+    }
   }
 
   // 스프라이트시트 프레임 애니메이션
@@ -365,7 +381,7 @@ export class Renderer {
       ctx.scale(-1, 1);
       ctx.drawImage(img, srcX, srcY, frameW, frameH, 0, dy, dw, dh);
       ctx.restore();
-    } else {
+    } else {1
       ctx.drawImage(img, srcX, srcY, frameW, frameH, dx, dy, dw, dh);
     }
     return true;
@@ -443,6 +459,97 @@ export class Renderer {
           ctx.restore();
           return;
         }
+      } else if (p.type === 'arcane') {
+        // 마법사: 금색 볼트
+        const s = this.em.getStripLoop('gold_bolt', p.elapsed, 14);
+        if (s) {
+          ctx.save();
+          ctx.imageSmoothingEnabled = false;
+          ctx.shadowBlur = 12; ctx.shadowColor = '#fbbf24';
+          const angle = Math.atan2(p.vy, p.vx);
+          ctx.translate(p.x, p.y);
+          ctx.rotate(angle);
+          const dw = 52, dh = 28;
+          ctx.drawImage(s.img, s.sx, s.sy, s.sw, s.sh, -dw/2, -dh/2, dw, dh);
+          ctx.restore();
+          return;
+        }
+      } else if (p.type === 'dark_magic') {
+        // 리치: 보라 링
+        const s = this.em.getStripLoop('purple_ring', p.elapsed, 12);
+        if (s) {
+          ctx.save();
+          ctx.imageSmoothingEnabled = false;
+          ctx.shadowBlur = 16; ctx.shadowColor = '#7c3aed';
+          const sz = 50;
+          ctx.drawImage(s.img, s.sx, s.sy, s.sw, s.sh, p.x - sz/2, p.y - sz/2, sz, sz);
+          ctx.restore();
+          return;
+        }
+      } else if (p.type === 'curse') {
+        // 79.png 보라 소용돌이 (row 1, 8cols, 9rows)
+        const s = this.em.getFreeFrameLoop('free79', p.elapsed, 10, 8, 1, 9);
+        if (s) {
+          ctx.save();
+          ctx.imageSmoothingEnabled = false;
+          ctx.shadowBlur = 16; ctx.shadowColor = '#818cf8';
+          const sz = 52;
+          ctx.drawImage(s.img, s.sx, s.sy, s.sw, s.sh, p.x - sz/2, p.y - sz/2, sz, sz);
+          ctx.restore();
+          return;
+        }
+      } else if (p.type === 'fire_arrow') {
+        const s = this.em.getArrowSrc(0, 1);
+        const angle = Math.atan2(p.vy, p.vx);
+        ctx.save();
+        ctx.imageSmoothingEnabled = false;
+        ctx.translate(p.x, p.y);
+        ctx.rotate(angle);
+        ctx.shadowBlur = 18; ctx.shadowColor = '#ff6820';
+        if (s) {
+          const dh = 28, dw = dh * (s.sw / s.sh);
+          ctx.drawImage(s.img, s.sx, s.sy, s.sw, s.sh, -dw/2, -dh/2, dw, dh);
+          ctx.globalAlpha = 0.9;
+          ctx.fillStyle = '#ff6820';
+          ctx.beginPath(); ctx.arc(-dh/2 - 4, 0, 7, 0, Math.PI*2); ctx.fill();
+          ctx.globalAlpha = 0.5;
+          ctx.fillStyle = '#ffcc44';
+          ctx.beginPath(); ctx.arc(-dh/2 - 10, 0, 4, 0, Math.PI*2); ctx.fill();
+        }
+        ctx.restore();
+        return;
+      } else if (p.type === 'fireball') {
+        ctx.save();
+        ctx.shadowBlur = 36; ctx.shadowColor = '#ff4500';
+        ctx.globalAlpha = 0.35;
+        ctx.fillStyle = '#ff6820';
+        ctx.beginPath(); ctx.arc(p.x, p.y, 22, 0, Math.PI*2); ctx.fill();
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = '#ff4500';
+        ctx.beginPath(); ctx.arc(p.x, p.y, 14, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = '#ffe066';
+        ctx.beginPath(); ctx.arc(p.x-4, p.y-4, 6, 0, Math.PI*2); ctx.fill();
+        ctx.restore();
+        return;
+      } else if (p.type === 'fire_siege') {
+        const img = this.em.getFrameLoop('round_explosion', p.elapsed, 14, 16);
+        if (img) {
+          ctx.save(); ctx.imageSmoothingEnabled = false;
+          ctx.drawImage(img, p.x-28, p.y-28, 56, 56);
+          ctx.restore(); return;
+        }
+      } else if (p.type === 'ice') {
+        // 72.png 파란 크리스탈 (row 2, 8cols, 9rows)
+        const s = this.em.getFreeFrameLoop('free72', p.elapsed, 12, 8, 2, 9);
+        if (s) {
+          ctx.save();
+          ctx.imageSmoothingEnabled = false;
+          ctx.shadowBlur = 14; ctx.shadowColor = '#67e8f9';
+          const sz = 44;
+          ctx.drawImage(s.img, s.sx, s.sy, s.sw, s.sh, p.x - sz/2, p.y - sz/2, sz, sz);
+          ctx.restore();
+          return;
+        }
       }
     }
 
@@ -497,21 +604,30 @@ export class Renderer {
     ctx.restore();
   }
 
-  drawArmyBadge(playerCount, enemyCount) {
+  drawArmyBadge(playerCount, enemyCount = 0) {
     const ctx = this.ctx;
-    const draw = (x, count, color) => {
-      ctx.fillStyle = color;
+    if (playerCount > 0) {
+      ctx.fillStyle = '#3b82f6';
       ctx.beginPath();
-      ctx.arc(x, GROUND_Y - 155, 18, 0, Math.PI * 2);
+      ctx.arc(56, GROUND_Y - 155, 18, 0, Math.PI * 2);
       ctx.fill();
       ctx.fillStyle = '#fff';
       ctx.font = 'bold 14px monospace';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(count, x, GROUND_Y - 155);
-    };
-    if (playerCount > 0) draw(56, playerCount, '#3b82f6');
-    if (enemyCount > 0)  draw(1144, enemyCount, '#ef4444');
+      ctx.fillText(playerCount, 56, GROUND_Y - 155);
+    }
+    if (enemyCount > 0) {
+      ctx.fillStyle = 'rgba(60,60,60,0.85)';
+      ctx.beginPath();
+      ctx.arc(W - 56, GROUND_Y - 155, 18, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#aaa';
+      ctx.font = 'bold 12px monospace';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('?', W - 56, GROUND_Y - 155);
+    }
   }
 
   drawUnit(unit) {
@@ -645,7 +761,7 @@ export class Renderer {
     const ctx = this.ctx;
 
     if (b.tileGrid?.length) {
-      // 타일 그리드 렌더링 (성벽 등)
+      // 타일 그리드 렌더링 (성벽 등)1
       const T = (b.tileSize || 16) * (b.scale || 2);
       const totalH = T * b.tileGrid.length;
       const bx = b.x - T / 2;
@@ -751,7 +867,20 @@ export class Renderer {
       ctx.beginPath(); ctx.arc(e.x, e.y, 24, 0, Math.PI * 2); ctx.fill();
 
     } else if (e.type === 'explosion') {
-      // 폭발: 이중 원 + 파편
+      // 76.png 오렌지 대형 폭발 (row 0, 10cols, 9rows)
+      if (this.em?.loaded && e.maxTimer) {
+        const progress = Math.min(1, 1 - e.timer / e.maxTimer);
+        const s = this.em.getFreeFrame('free76', progress, 10, 0, 9);
+        if (s) {
+          ctx.save(); ctx.imageSmoothingEnabled = false;
+          ctx.globalAlpha = Math.max(0, e.timer / e.maxTimer);
+          ctx.shadowBlur = 24; ctx.shadowColor = '#fbbf24';
+          const sz = 110;
+          ctx.drawImage(s.img, s.sx, s.sy, s.sw, s.sh, e.x - sz/2, e.y - sz/2, sz, sz);
+          ctx.restore(); return;
+        }
+      }
+      // fallback
       ctx.globalAlpha = a;
       ctx.shadowBlur = 24; ctx.shadowColor = '#fbbf24';
       ctx.fillStyle = '#fbbf24';
@@ -761,7 +890,20 @@ export class Renderer {
       ctx.beginPath(); ctx.arc(e.x, e.y, 18 + (1 - a) * 18, 0, Math.PI * 2); ctx.fill();
 
     } else if (e.type === 'ice') {
-      // 얼음: 결정 방사형
+      // 63.png 파란 별 파티클 (row 2, 7cols, 9rows)
+      if (this.em?.loaded && e.maxTimer) {
+        const progress = Math.min(1, 1 - e.timer / e.maxTimer);
+        const s = this.em.getFreeFrame('free63', progress, 7, 2, 9);
+        if (s) {
+          ctx.save(); ctx.imageSmoothingEnabled = false;
+          ctx.globalAlpha = Math.max(0, e.timer / e.maxTimer);
+          ctx.shadowBlur = 16; ctx.shadowColor = '#67e8f9';
+          const sz = 80;
+          ctx.drawImage(s.img, s.sx, s.sy, s.sw, s.sh, e.x - sz/2, e.y - sz/2, sz, sz);
+          ctx.restore(); return;
+        }
+      }
+      // fallback
       ctx.globalAlpha = a;
       ctx.shadowBlur = 16; ctx.shadowColor = color;
       ctx.strokeStyle = color; ctx.lineWidth = 2;
@@ -773,12 +915,11 @@ export class Renderer {
         ctx.lineTo(e.x + Math.cos(angle) * r, e.y + Math.sin(angle) * r);
         ctx.stroke();
       }
-      ctx.fillStyle = color;
-      ctx.globalAlpha = a * 0.5;
+      ctx.fillStyle = color; ctx.globalAlpha = a * 0.5;
       ctx.beginPath(); ctx.arc(e.x, e.y, 7, 0, Math.PI * 2); ctx.fill();
 
     } else if (e.type === 'magic') {
-      // 마법: 회전 링
+      // 마법: 회전 링 (fallback — magic_impact는 위에서 처리됨)
       ctx.globalAlpha = a;
       ctx.shadowBlur = 18; ctx.shadowColor = color;
       ctx.strokeStyle = color; ctx.lineWidth = 2.5;
@@ -850,7 +991,19 @@ export class Renderer {
       }
 
     } else if (e.type === 'heal') {
-      // 힐: 상승하는 녹색 십자
+      // 힐: 금색 불꽃 스프라이트
+      if (this.em?.loaded && e.maxTimer) {
+        const progress = Math.min(1, 1 - e.timer / e.maxTimer);
+        const s = this.em.getStrip('heal_flame', progress);
+        if (s) {
+          ctx.save(); ctx.imageSmoothingEnabled = false;
+          ctx.globalAlpha = Math.max(0, e.timer / e.maxTimer);
+          const rise = (1 - Math.max(0, e.timer / e.maxTimer)) * 14;
+          ctx.drawImage(s.img, s.sx, s.sy, s.sw, s.sh, e.x - 20, e.y - 40 - rise, 40, 40);
+          ctx.restore(); return;
+        }
+      }
+      // fallback
       const rise = (1 - a) * 18;
       ctx.globalAlpha = a;
       ctx.shadowBlur = 10; ctx.shadowColor = '#4ade80';
@@ -867,20 +1020,160 @@ export class Renderer {
       ctx.beginPath(); ctx.arc(e.x, e.y, 7, 0, Math.PI * 2); ctx.fill();
 
     } else if (e.type === 'heart') {
-      // 하트: 인간 유닛 매혹 표시
+      // 하트: 매혹 스프라이트
+      if (this.em?.loaded && e.maxTimer) {
+        const progress = Math.min(1, 1 - e.timer / e.maxTimer);
+        const s = this.em.getStrip('hearts_spell', progress);
+        if (s) {
+          ctx.save(); ctx.imageSmoothingEnabled = false;
+          ctx.globalAlpha = Math.max(0, e.timer / e.maxTimer);
+          const rise = progress * 16;
+          ctx.drawImage(s.img, s.sx, s.sy, s.sw, s.sh, e.x - 24, e.y - 48 - rise, 48, 48);
+          ctx.restore(); return;
+        }
+      }
+      // fallback
       ctx.globalAlpha = a;
       ctx.fillStyle = '#f472b6';
       ctx.shadowBlur = 10; ctx.shadowColor = '#f472b6';
-      const s = 1 + (1 - a) * 0.5;
-      ctx.save();
-      ctx.translate(e.x, e.y);
-      ctx.scale(s, s);
+      const hs = 1 + (1 - a) * 0.5;
+      ctx.save(); ctx.translate(e.x, e.y); ctx.scale(hs, hs);
       ctx.beginPath();
       ctx.moveTo(0, -4);
       ctx.bezierCurveTo(-10, -14, -20, -4, 0, 8);
       ctx.bezierCurveTo(20, -4, 10, -14, 0, -4);
+      ctx.fill(); ctx.restore();
+
+    } else if (e.type === 'arcane') {
+      // 마법사 피격: 금빛 burst
+      if (this.em?.loaded && e.maxTimer) {
+        const progress = Math.min(1, 1 - e.timer / e.maxTimer);
+        const s = this.em.getStrip('gold_bolt', progress);
+        if (s) {
+          ctx.save(); ctx.imageSmoothingEnabled = false;
+          ctx.globalAlpha = Math.max(0, e.timer / e.maxTimer);
+          ctx.shadowBlur = 18; ctx.shadowColor = '#fbbf24';
+          ctx.drawImage(s.img, s.sx, s.sy, s.sw, s.sh, e.x - 44, e.y - 28, 88, 56);
+          ctx.restore(); return;
+        }
+      }
+      ctx.globalAlpha = a; ctx.shadowBlur = 18; ctx.shadowColor = '#fbbf24';
+      ctx.fillStyle = '#fbbf24';
+      ctx.beginPath(); ctx.arc(e.x, e.y, 12 + (1-a)*14, 0, Math.PI*2); ctx.fill();
+
+    } else if (e.type === 'dark_magic') {
+      // 리치 피격: 보라 링 → 다크 블롭
+      if (this.em?.loaded && e.maxTimer) {
+        const progress = Math.min(1, 1 - e.timer / e.maxTimer);
+        const s = progress < 0.5
+          ? this.em.getStrip('purple_ring', progress * 2)
+          : this.em.getStrip('dark_blob', (progress - 0.5) * 2);
+        if (s) {
+          ctx.save(); ctx.imageSmoothingEnabled = false;
+          ctx.globalAlpha = Math.max(0, e.timer / e.maxTimer);
+          ctx.shadowBlur = 20; ctx.shadowColor = '#7c3aed';
+          const sz = progress < 0.5 ? 80 : 88;
+          ctx.drawImage(s.img, s.sx, s.sy, s.sw, s.sh, e.x - sz/2, e.y - sz/2, sz, sz);
+          ctx.restore(); return;
+        }
+      }
+      ctx.globalAlpha = a; ctx.shadowBlur = 22; ctx.shadowColor = '#7c3aed';
+      ctx.fillStyle = '#7c3aed';
+      ctx.beginPath(); ctx.arc(e.x, e.y, 14 + (1-a)*18, 0, Math.PI*2); ctx.fill();
+
+    } else if (e.type === 'curse') {
+      // 77.png 보라 원형 폭발 (row 1, 10cols, 9rows)
+      if (this.em?.loaded && e.maxTimer) {
+        const progress = Math.min(1, 1 - e.timer / e.maxTimer);
+        const s = this.em.getFreeFrame('free77', progress, 10, 1, 9);
+        if (s) {
+          ctx.save(); ctx.imageSmoothingEnabled = false;
+          ctx.globalAlpha = Math.max(0, e.timer / e.maxTimer);
+          ctx.shadowBlur = 20; ctx.shadowColor = '#818cf8';
+          const sz = 96;
+          ctx.drawImage(s.img, s.sx, s.sy, s.sw, s.sh, e.x - sz/2, e.y - sz/2, sz, sz);
+          ctx.restore(); return;
+        }
+      }
+      ctx.globalAlpha = a; ctx.shadowBlur = 14; ctx.shadowColor = '#818cf8';
+      ctx.strokeStyle = '#818cf8'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(e.x, e.y, 14 + (1-a)*14, 0, Math.PI*2); ctx.stroke();
+
+    } else if (e.type === 'slash') {
+      if (this.em?.loaded && e.maxTimer) {
+        const progress = Math.min(1, 1 - e.timer / e.maxTimer);
+        const frames = this.em.frames.slash;
+        if (frames?.length) {
+          const fi = Math.min(Math.floor(progress * frames.length), frames.length - 1);
+          const img = frames[fi];
+          if (img) {
+            const sz = 96;
+            ctx.save();
+            ctx.imageSmoothingEnabled = false;
+            ctx.globalAlpha = Math.max(0, e.timer / e.maxTimer) * 1.4;
+            if (e.flip) {
+              ctx.translate(e.x + sz / 2, e.y);
+              ctx.scale(-1, 1);
+              ctx.drawImage(img, -sz / 2, -sz / 2, sz, sz);
+            } else {
+              ctx.drawImage(img, e.x - sz / 2, e.y - sz / 2, sz, sz);
+            }
+            ctx.restore();
+            return;
+          }
+        }
+      }
+      // fallback: 흰 선
+      ctx.globalAlpha = a;
+      ctx.strokeStyle = '#fff8dc'; ctx.lineWidth = 3; ctx.lineCap = 'round';
+      ctx.shadowBlur = 10; ctx.shadowColor = '#fde68a';
+      ctx.beginPath();
+      ctx.moveTo(e.x - 20, e.y - 12); ctx.lineTo(e.x + 20, e.y + 12);
+      ctx.stroke();
+
+    } else if (e.type === 'fire_arrow') {
+      if (this.em?.loaded && e.maxTimer) {
+        const progress = Math.min(1, 1 - e.timer / e.maxTimer);
+        const img = this.em.getFrame('round_explosion', progress);
+        if (img) {
+          ctx.save(); ctx.imageSmoothingEnabled = false;
+          ctx.drawImage(img, e.x - 48, e.y - 48, 96, 96);
+          ctx.restore(); return;
+        }
+      }
+      ctx.globalAlpha = a; ctx.shadowBlur = 14; ctx.shadowColor = '#ff6820';
+      ctx.fillStyle = '#ff6820';
+      ctx.beginPath(); ctx.arc(e.x, e.y, 10 + (1-a)*14, 0, Math.PI*2); ctx.fill();
+
+    } else if (e.type === 'fireball') {
+      if (this.em?.loaded && e.maxTimer) {
+        const progress = Math.min(1, 1 - e.timer / e.maxTimer);
+        const img = this.em.getFrame('round_explosion', progress);
+        if (img) {
+          ctx.save(); ctx.imageSmoothingEnabled = false;
+          ctx.drawImage(img, e.x - 110, e.y - 110, 220, 220);
+          ctx.restore(); return;
+        }
+      }
+      ctx.globalAlpha = a; ctx.shadowBlur = 32; ctx.shadowColor = '#ff4500';
+      ctx.fillStyle = '#ff4500';
+      ctx.beginPath(); ctx.arc(e.x, e.y, 18 + (1-a)*34, 0, Math.PI*2); ctx.fill();
+
+    } else if (e.type === 'fire_siege') {
+      if (this.em?.loaded && e.maxTimer) {
+        const progress = Math.min(1, 1 - e.timer / e.maxTimer);
+        const img = this.em.getFrame('round_explosion', progress);
+        if (img) {
+          ctx.save(); ctx.imageSmoothingEnabled = false;
+          ctx.drawImage(img, e.x - 90, e.y - 56, 180, 112);
+          ctx.restore(); return;
+        }
+      }
+      ctx.globalAlpha = a; ctx.shadowBlur = 22; ctx.shadowColor = '#ff5c00';
+      ctx.fillStyle = '#ff5c00';
+      ctx.beginPath();
+      ctx.ellipse(e.x, e.y, 24 + (1-a)*30, 14 + (1-a)*16, 0, 0, Math.PI*2);
       ctx.fill();
-      ctx.restore();
 
     } else {
       // fire / arrow / block / 기본: 발광 원

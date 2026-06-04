@@ -16,11 +16,12 @@ export class BuildPhase {
   }
 
   start() {
-    this.startTime = performance.now();
+    this.startTime  = performance.now();
+    this._startedAt = Date.now();
   }
 
   update(dt) {
-    this.timer -= dt;
+    this.timer = Math.max(0, 30 - (Date.now() - this._startedAt) / 1000);
     if (this.timer <= 0) { this.engine.startBattle(); return; }
 
     if (this.aiEnabled) {
