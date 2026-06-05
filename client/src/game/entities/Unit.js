@@ -355,7 +355,7 @@ export class Unit {
     };
 
     if (!isRanged && unitTarget && !unitTarget.dead) {
-      const effectType = this.faction === 'beast' ? 'claw' : 'slash';
+      const effectType = 'slash';
       battle.effects.push({
         x: unitTarget.x, y: unitTarget.y - 20,
         type: effectType, timer: 0.4, maxTimer: 0.4,

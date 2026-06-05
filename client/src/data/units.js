@@ -1,4 +1,20 @@
 const TANKS = '/assets/sprites/kenney_tanks/PNG/Default size';
+const MINI  = '/assets/sprites/MinifolksHumans/Outline';
+
+// Minifolks: 모두 32×32 프레임, row0=보행(오른쪽), row3=공격
+// attackFrames: row 4 (동쪽 공격), deathFrames: row 5
+const mkMini = (file, cols, rows, walkFrames, attackRow = 4, deathRow = 5) => {
+  const af = Array.from({ length: Math.min(cols, 6) }, (_, i) => attackRow * cols + i);
+  const df = rows > deathRow ? Array.from({ length: Math.min(cols, 6) }, (_, i) => deathRow * cols + i) : null;
+  return {
+    sprite: `${MINI}/${file}`,
+    sheet: null, tileRow: null, tileCol: null,
+    weaponSheet: null, weaponRow: null, weaponCol: null,
+    size: 16, scale: 3,
+    yOffset: 10,
+    animFrames: { cols, rows, walkFrames, attackFrames: af, deathFrames: df, fps: 4, renderW: 96, renderH: 96 },
+  };
+};
 
 // ── 공통 기본값 (생략 시 적용) ───────────────────────────────────────────
 // def: 0, mdef: 0, dmgType: 'physical', traits: [], ability: null
@@ -15,10 +31,9 @@ export const UNIT_DEFS = {
     attack: 6, speed: 55, range: 24, cooldown: 1.2,
     def: 2, mdef: 0, dmgType: 'physical', role: 'infantry', faction: 'human', traits: [],
     ability: 'charge', abilityData: { mult: 1.3 },
-    sheet: 'tiny-dungeon', tileRow: 7, tileCol: 3,
-    weaponSheet: 'tiny-dungeon', weaponRow: 8, weaponCol: 10,
     color: '#4a9eff', enemyColor: '#ff5555',
-    size: 16, scale: 3,
+    // 192×192, 6cols×6rows, row0=보행, row3=공격
+    ...mkMini('MiniSwordMan.png', 6, 6, [12,13,14]),
   },
 
   archer: {
@@ -27,10 +42,9 @@ export const UNIT_DEFS = {
     attack: 9, speed: 65, range: 130, cooldown: 1.6,
     def: 0, mdef: 0, dmgType: 'pierce', role: 'ranged', faction: 'human', traits: [],
     ability: null,
-    sheet: 'tiny-dungeon', tileRow: 7, tileCol: 1,
-    weaponSheet: 'tiny-addon', weaponRow: 2, weaponCol: 6,
     color: '#4dff91', enemyColor: '#ff7070',
-    size: 16, scale: 3,
+    // 352×224, 11cols×7rows
+    ...mkMini('MiniArcherMan.png', 11, 7, [22,23,24]),
   },
 
   knight: {
@@ -39,10 +53,9 @@ export const UNIT_DEFS = {
     attack: 14, speed: 40, range: 28, cooldown: 1.8,
     def: 12, mdef: 2, dmgType: 'physical', role: 'heavy', faction: 'human', traits: ['armored'],
     ability: null,
-    sheet: 'tiny-dungeon', tileRow: 8, tileCol: 0,
-    weaponSheet: 'tiny-addon', weaponRow: 13, weaponCol: 10,
     color: '#ffe566', enemyColor: '#ff8866',
-    size: 16, scale: 3,
+    // 192×224, 6cols×7rows
+    ...mkMini('MiniShieldMan.png', 6, 7, [12,13,14]),
   },
 
   wizard: {
@@ -51,10 +64,9 @@ export const UNIT_DEFS = {
     attack: 22, speed: 35, range: 180, cooldown: 2.5,
     def: 0, mdef: 8, dmgType: 'magical', role: 'mage', faction: 'human', traits: [],
     ability: null,
-    sheet: 'tiny-dungeon', tileRow: 7, tileCol: 0,
-    weaponSheet: 'tiny-dungeon', weaponRow: 10, weaponCol: 10,
     color: '#c084fc', enemyColor: '#fc84c0',
-    size: 16, scale: 3,
+    // 352×256, 11cols×8rows
+    ...mkMini('MiniMage.png', 11, 8, [22,23,24]),
   },
 
   // ══════════════════════════════════════════════
@@ -183,10 +195,9 @@ export const UNIT_DEFS = {
     attack: 11, speed: 36, range: 26, cooldown: 1.6,
     def: 10, mdef: 8, dmgType: 'holy', role: 'heavy', faction: 'human', traits: ['armored'],
     ability: 'heal_aura', abilityData: { range: 120, healRate: 5 },
-    sheet: 'tiny-addon', tileRow: 4, tileCol: 3,
-    weaponSheet: null, weaponRow: null, weaponCol: null,
     color: '#fde68a', enemyColor: '#fca5a5',
-    size: 16, scale: 3,
+    // 320×224, 10cols×7rows
+    ...mkMini('MiniKingMan.png', 10, 7, [20,21,22]),
   },
 
   rogue: {
@@ -195,10 +206,9 @@ export const UNIT_DEFS = {
     attack: 13, speed: 95, range: 24, cooldown: 1.0,
     def: 1, mdef: 0, dmgType: 'pierce', role: 'infantry', faction: 'human', traits: [],
     ability: 'charge', abilityData: { mult: 1.8 },
-    sheet: 'tiny-addon', tileRow: 6, tileCol: 2,
-    weaponSheet: null, weaponRow: null, weaponCol: null,
     color: '#94a3b8', enemyColor: '#f87171',
-    size: 16, scale: 3,
+    // 224×192, 7cols×6rows
+    ...mkMini('MiniSpearMan.png', 7, 6, [14,15,16]),
   },
 
   crossbowman: {
@@ -326,10 +336,9 @@ export const UNIT_DEFS = {
     attack: 14, speed: 38, range: 160, cooldown: 2.2,
     def: 1, mdef: 12, dmgType: 'holy', role: 'mage', faction: 'human', traits: [],
     ability: 'heal_aura', abilityData: { range: 110, healRate: 4 },
-    sheet: 'tiny-dungeon', tileRow: 7, tileCol: 2,
-    weaponSheet: 'tiny-dungeon', weaponRow: 10, weaponCol: 10,
     color: '#fef9c3', enemyColor: '#fca5a5',
-    size: 16, scale: 3,
+    // 352×288, 11cols×9rows
+    ...mkMini('MiniArchMage.png', 11, 9, [22,23,24]),
   },
 
   // ══════════════════════════════════════════════

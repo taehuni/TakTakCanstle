@@ -102,7 +102,32 @@ function UnitCanvas({ unitId, size = 56, silhouette = false }) {
 
     if (def.sprite) {
       const img = new Image();
-      img.onload = () => blit(img, 0, 0, img.width, img.height);
+      img.onload = () => {
+        if (def.animFrames) {
+          const { cols, rows = 1, walkFrames = [0] } = def.animFrames;
+          const fw = img.width / cols;
+          const fh = img.height / rows;
+          const fi = 0; // 도감: 항상 정면(frame 0) 포즈
+          const sx = (fi % cols) * fw, sy = Math.floor(fi / cols) * fh;
+          // 픽셀 스캔으로 실제 캐릭터 영역 감지
+          const tmp = document.createElement('canvas');
+          tmp.width = fw; tmp.height = fh;
+          const tc = tmp.getContext('2d');
+          tc.drawImage(img, sx, sy, fw, fh, 0, 0, fw, fh);
+          const pd = tc.getImageData(0, 0, fw, fh).data;
+          let x0 = fw, x1 = 0, y0 = fh, y1 = 0;
+          for (let py = 0; py < fh; py++) for (let px = 0; px < fw; px++) {
+            if (pd[(py * fw + px) * 4 + 3] > 10) {
+              if (px < x0) x0 = px; if (px > x1) x1 = px;
+              if (py < y0) y0 = py; if (py > y1) y1 = py;
+            }
+          }
+          if (x1 >= x0 && y1 >= y0) blit(img, sx + x0, sy + y0, x1 - x0 + 1, y1 - y0 + 1);
+          else blit(img, sx, sy, fw, fh);
+        } else {
+          blit(img, 0, 0, img.width, img.height);
+        }
+      };
       img.onerror = drawFallback;
       img.src = def.sprite;
     } else if (def.sheet && def.tileRow !== null) {

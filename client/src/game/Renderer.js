@@ -307,8 +307,10 @@ export class Renderer {
   drawMiniUnit(unitId, side, x, y, silhouette = false) {
     const def = UNIT_DEFS[unitId];
     if (!def) return;
-    const w = def.size * 2, h = def.size * 2;
-    const bx = x - w / 2, by = y - h;
+    const w   = def.animFrames?.renderW ?? (def.size * (def.scale || 3));
+    const h   = def.animFrames?.renderH ?? (def.size * (def.scale || 3));
+    const yOff = def.yOffset || 0;
+    const bx  = x - w / 2, by = y - h + yOff;
     const color = side === 'player' ? def.color : def.enemyColor;
     const ctx = this.ctx;
     const flip = side === 'enemy';
@@ -360,11 +362,21 @@ export class Renderer {
   }
 
   // 스프라이트시트 프레임 애니메이션
-  drawAnimFrame(img, animFrames, animTimer, state, dx, dy, dw, dh, flip) {
-    const { cols = 2, rows = 2, walkFrames = [0], attackFrame, fps = 6 } = animFrames;
+  drawAnimFrame(img, animFrames, animTimer, state, dx, dy, dw, dh, flip, attackTimer = 0) {
+    const { cols = 2, rows = 2, walkFrames = [0], attackFrame, attackFrames, deathFrames, fps = 6 } = animFrames;
     let frameIdx;
-    if (state === 'attack' && attackFrame != null) {
-      frameIdx = attackFrame;
+    if (state === 'dying' && deathFrames?.length) {
+      const t = Math.max(0, 1 - attackTimer / 0.6);
+      frameIdx = deathFrames[Math.min(Math.floor(t * deathFrames.length), deathFrames.length - 1)];
+    } else if (state === 'attack') {
+      if (attackFrames?.length) {
+        const t = Math.max(0, 1 - attackTimer / 0.4);
+        frameIdx = attackFrames[Math.min(Math.floor(t * attackFrames.length), attackFrames.length - 1)];
+      } else if (attackFrame != null) {
+        frameIdx = attackFrame;
+      } else {
+        frameIdx = walkFrames[0];
+      }
     } else if (state === 'idle') {
       frameIdx = walkFrames[0];
     } else {
@@ -696,7 +708,7 @@ export class Renderer {
       const img = this.sc.get(directSrc);
       if (img) {
         if (unit.animFrames) {
-          drawn = this.drawAnimFrame(img, unit.animFrames, unit.animTimer, unit.state, x, y, w, h, flip);
+          drawn = this.drawAnimFrame(img, unit.animFrames, unit.animTimer, unit.state, x, y, w, h, flip, unit.attackAnimTimer || 0);
         } else if (flip && !unit.enemySprite) {
           ctx.save(); ctx.scale(-1, 1);
           ctx.drawImage(img, -x - w, y, w, h);
@@ -727,10 +739,12 @@ export class Renderer {
     // HP 바
     if (unit.hp < unit.maxHp) {
       const ratio = unit.hp / unit.maxHp;
+      const barW = 44; // 고정 너비 (renderW에 무관)
+      const barX = unit.x - barW / 2;
       ctx.fillStyle = '#333';
-      ctx.fillRect(x, y - 5, w, 3);
+      ctx.fillRect(barX, y - 5, barW, 3);
       ctx.fillStyle = ratio > 0.5 ? '#4ade80' : ratio > 0.25 ? '#facc15' : '#ef4444';
-      ctx.fillRect(x, y - 5, w * ratio, 3);
+      ctx.fillRect(barX, y - 5, barW * ratio, 3);
     }
 
     // charm_aura: 분홍 오라 원
