@@ -4,8 +4,62 @@ import { UNIT_META } from '../data/unitMeta.js';
 import { UNIT_DEFS } from '../data/units.js';
 import { SHEETS } from '../game/SpriteCache.js';
 
-const HIDDEN_UNITS = BUILD_WORDS.filter(w => w.hidden && w.type === 'unit');
+const PUBLIC_UNITS = BUILD_WORDS.filter(w => !w.hidden && w.type === 'unit');
+const HIDDEN_UNITS = BUILD_WORDS.filter(w =>  w.hidden && w.type === 'unit');
 
+// ── 번역 테이블 ────────────────────────────────────────────────────────────
+const ROLE_KO    = { infantry:'보병', ranged:'원거리', heavy:'중장보병', mage:'마법사', spirit:'정령', explosive:'폭발물', siege:'공성' };
+const FACTION_KO = { human:'인간', undead:'언데드', goblin:'고블린', orc:'오크', feline:'정령', beast:'야수', dragon:'용족' };
+const DMG_KO     = { physical:'물리', pierce:'관통', magical:'마법', holy:'신성', fire:'화염', curse:'저주', true:'고정' };
+
+// ── 상성 힌트 (combat.js 기반) ──────────────────────────────────────────────
+// 어느 종족/유형에 강한지만 표시 (특성과 중복 제외)
+const COUNTER_INFO = {
+  swordsman:   '마법사 계열에 강함',
+  archer:      '보병 계열에 강함',
+  knight:      '원거리·궁수 계열에 강함',
+  wizard:      '중장갑 유닛에 강함',
+  paladin:     '언데드 진영에 강함',
+  priest:      '언데드 진영에 강함',
+  rogue:       '마법사 계열에 강함',
+  lich:        '중장갑·정령 유닛에 강함',
+  death_knight:'중장갑 계열에 강함',
+  shaman:      '강력한 단일 유닛에 강함',
+  warchief:    '아군이 많을수록 강함',
+  cat:         '인간 진영 유닛에 강함',
+  wolf:        '마법사 계열에 강함 (빠른 돌격)',
+  bear:        '원거리·궁수 계열에 강함 (고방어)',
+  dragon:      '언데드·군집 유닛에 강함',
+  eagle:       '지상 유닛에 강함',
+};
+
+function abilityDesc(ability, data = {}) {
+  switch (ability) {
+    case 'charge':      return `첫 번째 공격 시 ${Math.round((data.mult||1)*100)}% 피해`;
+    case 'double_spawn':return '소환 시 2마리 동시 등장';
+    case 'triple_spawn':return '소환 시 3마리 동시 등장';
+    case 'phase':       return '첫 공격 전까지 완전 무적 · 성벽 통과';
+    case 'revive':      return `사망 후 ${data.delay||1.5}초 뒤 HP ${Math.round((data.hpRatio||0.4)*100)}%로 부활 (1회)`;
+    case 'life_steal':  return `가한 피해의 ${Math.round((data.stealRate||0.2)*100)}%를 HP로 흡수`;
+    case 'aura':        return `주변 ${data.range||150}px 아군 속도 +${Math.round((data.speedMult||1.3)*100-100)}% · 공격력 +${Math.round((data.atkMult||1.2)*100-100)}%`;
+    case 'kamikaze':    return `적 ${data.triggerRange||50}px 내 진입 시 자폭 · 반경 ${data.aoeRange||90}px AoE`;
+    case 'rage':        return `HP ${Math.round((data.threshold||0.3)*100)}% 이하 → 공격력 ×${data.atkMult||2} · 속도 ×${data.spdMult||1.5}`;
+    case 'curse':       return `대상 공격력 ${Math.round((data.curseMult||0.6)*100)}% · 지속 ${data.curseDuration||5}초`;
+    case 'heal_aura':   return `주변 ${data.range||120}px 아군 초당 ${data.healRate||5} HP 회복`;
+    case 'charm_aura':  return `주변 ${data.range||90}px 인간 유닛 행동 불가`;
+    case 'regen':       return `매초 ${data.regenRate||3} HP 자동 회복`;
+    default:            return null;
+  }
+}
+
+const ABILITY_NAME = {
+  charge:'돌격', double_spawn:'군집 소환', triple_spawn:'군집 소환',
+  phase:'유체화', revive:'부활', life_steal:'흡혈',
+  aura:'전투 오라', kamikaze:'자폭', rage:'분노',
+  curse:'저주', heal_aura:'치유 오라', charm_aura:'매혹 오라', regen:'재생',
+};
+
+// ── 유닛 스프라이트 ────────────────────────────────────────────────────────
 function UnitCanvas({ unitId, size = 56, silhouette = false }) {
   const ref = useRef(null);
   useEffect(() => {
@@ -37,7 +91,6 @@ function UnitCanvas({ unitId, size = 56, silhouette = false }) {
         const tc = tmp.getContext('2d');
         tc.imageSmoothingEnabled = false;
         tc.drawImage(img, sx, sy, sw, sh, 0, 0, size, size);
-        // silhouette: tint solid dark
         tc.globalCompositeOperation = 'source-in';
         tc.fillStyle = '#1a1a2a';
         tc.fillRect(0, 0, size, size);
@@ -70,36 +123,112 @@ function UnitCanvas({ unitId, size = 56, silhouette = false }) {
   return <canvas ref={ref} width={size} height={size} style={{ imageRendering: 'pixelated', display: 'block' }} />;
 }
 
+// ── 유닛 카드 ──────────────────────────────────────────────────────────────
 function UnitCard({ entry, discovered }) {
-  const meta = UNIT_META[entry.unit] || {};
+  const [hovered, setHovered] = useState(false);
+  const meta  = UNIT_META[entry.unit] || {};
   const color = meta.color || '#888';
 
   if (!discovered) {
     return (
-      <div style={{ ...S.card, borderColor: 'rgba(255,255,255,0.08)', background: 'rgba(0,0,0,0.25)' }}>
+      <div style={{ ...S.card, borderColor: 'rgba(255,255,255,0.08)', background: 'rgba(0,0,0,0.25)', cursor: 'default' }}>
         <div style={{ position: 'relative' }}>
           <UnitCanvas unitId={entry.unit} size={56} silhouette />
           <div style={S.unknownOverlay}>?</div>
         </div>
-        <div style={{ fontSize: 13, color: '#555070', fontWeight: 700, marginTop: 6 }}>???</div>
-        <div style={{ fontSize: 10, color: '#3a3555', letterSpacing: 1, marginTop: 2 }}>미발견</div>
+        <div style={{ fontSize: 13, color: '#9090b8', fontWeight: 700, marginTop: 6 }}>???</div>
+        <div style={{ fontSize: 10, color: '#7a6a9a', letterSpacing: 1, marginTop: 2 }}>미발견</div>
       </div>
     );
   }
 
+  const def   = UNIT_DEFS[entry.unit];
+  const aDesc = abilityDesc(def?.ability, def?.abilityData);
+  const aName = ABILITY_NAME[def?.ability];
+
   return (
-    <div style={{ ...S.card, borderColor: color + '55', background: color + '0d' }}>
-      <UnitCanvas unitId={entry.unit} size={64} />
-      <div style={{ fontSize: 14, color, fontWeight: 800, marginTop: 10, letterSpacing: 0.5 }}>{meta.label || entry.unit}</div>
+    <div
+      style={{ position: 'relative' }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
       <div style={{
-        marginTop: 6, fontSize: 11, color: color,
-        background: color + '18', border: `1px solid ${color}44`,
-        borderRadius: 4, padding: '2px 10px', letterSpacing: 0.5,
-      }}>{entry.word}</div>
+        ...S.card,
+        borderColor: hovered ? color + 'bb' : color + '55',
+        background: hovered ? color + '18' : color + '0d',
+        cursor: 'default',
+        transition: 'all 0.15s',
+        boxShadow: hovered ? `0 0 18px ${color}33` : 'none',
+      }}>
+        <UnitCanvas unitId={entry.unit} size={64} />
+        <div style={{ fontSize: 14, color, fontWeight: 800, marginTop: 10, letterSpacing: 0.5 }}>{meta.label || entry.unit}</div>
+        <div style={{
+          marginTop: 6, fontSize: 11, color,
+          background: color + '18', border: `1px solid ${color}44`,
+          borderRadius: 4, padding: '2px 10px', letterSpacing: 0.5,
+        }}>{entry.word}</div>
+      </div>
+
+      {/* 호버 툴팁 */}
+      {hovered && def && (
+        <div style={{ ...S.tooltip, borderColor: color + '55' }}>
+          {/* 기본 정보 */}
+          <div style={{ display: 'flex', gap: 6, marginBottom: 8, flexWrap: 'wrap' }}>
+            <Tag color={color}>{FACTION_KO[def.faction] || def.faction}</Tag>
+            <Tag color="#7060a0">{ROLE_KO[def.role] || def.role}</Tag>
+            <Tag color={(def.range||0) >= 40 ? '#60a5fa' : '#f87171'}>
+              {(def.range||0) >= 40 ? '원거리' : '근접'}
+            </Tag>
+            {def.traits?.includes('flying') && <Tag color="#67e8f9">🪶 공중</Tag>}
+            {def.traits?.includes('armored') && <Tag color="#fbbf24">🛡 방어구</Tag>}
+          </div>
+          {/* 스탯 */}
+          <div style={S.tipStats}>
+            <TipStat label="HP"   value={def.maxHp}      color={color} />
+            <TipStat label="공격" value={def.attack}     color={color} />
+            <TipStat label="속도" value={def.speed}      color={color} />
+            <TipStat label="방어" value={def.def}        color={color} />
+            <TipStat label="사거리" value={def.range}    color={color} />
+            <TipStat label="쿨타임" value={`${def.cooldown}s`} color={color} />
+          </div>
+          {/* 어빌리티 */}
+          {aDesc && (
+            <div style={S.tipAbility}>
+              <span style={{ color, fontWeight: 800, fontSize: 10, marginRight: 6 }}>★ {aName}</span>
+              <span style={{ color: '#b0a8c8', fontSize: 11 }}>{aDesc}</span>
+            </div>
+          )}
+          {/* 강점 */}
+          {COUNTER_INFO[entry.unit] && (
+            <div style={{ marginTop: 6, fontSize: 10 }}>
+              <span style={{ color: '#4ade80', fontWeight: 700 }}>⚡ </span>
+              <span style={{ color: '#a0d0b8' }}>{COUNTER_INFO[entry.unit]}</span>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
 
+function Tag({ color, children }) {
+  return (
+    <span style={{ fontSize: 9, color, background: color + '18', border: `1px solid ${color}33`, borderRadius: 3, padding: '2px 7px', fontWeight: 700, letterSpacing: 0.5 }}>
+      {children}
+    </span>
+  );
+}
+function TipStat({ label, value, color }) {
+  return (
+    <div style={{ textAlign: 'center', flex: 1 }}>
+      <div style={{ fontSize: 14, fontWeight: 900, color }}>{value}</div>
+      <div style={{ fontSize: 9, color: '#5a5070', marginTop: 1 }}>{label}</div>
+    </div>
+  );
+}
+
+
+// ── 메인 ───────────────────────────────────────────────────────────────────
 export default function DogamScreen({ onBack }) {
   const [discovered, setDiscovered] = useState([]);
 
@@ -122,10 +251,10 @@ export default function DogamScreen({ onBack }) {
         <div style={S.progress}>
           <div style={S.progressNum}>
             <span style={{ fontSize: 28, fontWeight: 900, color: '#fde047' }}>{count}</span>
-            <span style={{ fontSize: 14, color: '#2e2550', margin: '0 4px' }}>/</span>
-            <span style={{ fontSize: 16, color: '#2e2550' }}>{total}</span>
+            <span style={{ fontSize: 14, color: '#8878b8', margin: '0 4px' }}>/</span>
+            <span style={{ fontSize: 16, color: '#8878b8' }}>{total}</span>
           </div>
-          <div style={{ fontSize: 10, color: '#2e2550', letterSpacing: 1, marginTop: 2 }}>발견 완료</div>
+          <div style={{ fontSize: 10, color: '#8878b8', letterSpacing: 1, marginTop: 2 }}>발견 완료</div>
           <div style={S.progressBar}>
             <div style={{ ...S.progressFill, width: `${pct}%` }} />
           </div>
@@ -137,16 +266,28 @@ export default function DogamScreen({ onBack }) {
         게임 중 어떤 단어든 타이핑해 보세요 — 히든 유닛이 소환될지도 모릅니다.
       </div>
 
+      {/* 기본 유닛 */}
+      <div style={S.sectionLabel}>⚔ 기본 유닛</div>
+      <div style={S.grid}>
+        {PUBLIC_UNITS.map(entry => (
+          <UnitCard key={entry.unit} entry={entry} discovered={true} />
+        ))}
+      </div>
+
+      {/* 히든 유닛 */}
+      <div style={{ ...S.sectionLabel, marginTop: 32 }}>✦ 히든 유닛</div>
       <div style={S.grid}>
         {HIDDEN_UNITS.map(entry => (
-          <UnitCard key={entry.unit} entry={entry} discovered={discovered.includes(entry.unit)} />
+          <UnitCard
+            key={entry.unit}
+            entry={entry}
+            discovered={discovered.includes(entry.unit)}
+          />
         ))}
       </div>
 
       {count === total && total > 0 && (
-        <div style={S.completeMsg}>
-          ✦ 모든 히든 유닛을 발견했습니다! ✦
-        </div>
+        <div style={S.completeMsg}>✦ 모든 히든 유닛을 발견했습니다! ✦</div>
       )}
     </div>
   );
@@ -189,8 +330,13 @@ const S = {
     borderRadius: 3,
   },
   hint: {
-    fontSize: 12, color: '#6a6080', letterSpacing: 0.5,
+    fontSize: 12, color: '#9090b0', letterSpacing: 0.5,
     marginBottom: 28, textAlign: 'center',
+  },
+  sectionLabel: {
+    width: '100%', maxWidth: 940,
+    fontSize: 10, fontWeight: 700, color: '#9080b8',
+    letterSpacing: 3, marginBottom: 12,
   },
   grid: {
     display: 'grid',
@@ -207,8 +353,37 @@ const S = {
   unknownOverlay: {
     position: 'absolute', inset: 0,
     display: 'flex', alignItems: 'center', justifyContent: 'center',
-    fontSize: 22, fontWeight: 900, color: '#3a3555',
+    fontSize: 22, fontWeight: 900, color: '#7a6a9a',
   },
+
+  // 툴팁
+  tooltip: {
+    position: 'absolute',
+    bottom: 'calc(100% + 10px)',
+    left: '50%',
+    transform: 'translateX(-50%)',
+    width: 240,
+    background: 'linear-gradient(160deg, #1e1a38 0%, #151228 100%)',
+    border: '1px solid',
+    borderRadius: 10,
+    padding: '12px 14px',
+    zIndex: 200,
+    boxShadow: '0 8px 32px rgba(0,0,0,0.8)',
+    pointerEvents: 'none',
+  },
+  tipStats: {
+    display: 'flex', gap: 4,
+    background: 'rgba(0,0,0,0.25)',
+    borderRadius: 6, padding: '8px 4px',
+    marginBottom: 8,
+  },
+  tipAbility: {
+    background: 'rgba(124,92,191,0.1)',
+    border: '1px solid rgba(124,92,191,0.2)',
+    borderRadius: 6, padding: '8px 10px',
+    lineHeight: 1.6,
+  },
+
   completeMsg: {
     marginTop: 40, fontSize: 14, fontWeight: 700, color: '#fde047',
     letterSpacing: 3, textShadow: '0 0 20px #fde047',

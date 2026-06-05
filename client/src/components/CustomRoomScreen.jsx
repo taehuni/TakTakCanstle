@@ -153,13 +153,13 @@ const S = {
     display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 18,
     minWidth: 380,
   },
-  eyebrow: { fontSize: 10, color: '#6b7280', letterSpacing: 4, fontWeight: 700 },
+  eyebrow: { fontSize: 10, color: '#94a3b8', letterSpacing: 4, fontWeight: 700 },
   title:   { fontSize: 24, fontWeight: 800, color: '#e8e8f0', letterSpacing: 2 },
 
   tabs: { display: 'flex', gap: 0, borderRadius: 8, overflow: 'hidden', border: '1px solid #2a1f4a' },
   tab: {
     padding: '9px 28px', background: 'transparent',
-    border: 'none', color: '#6b7280', fontSize: 13, fontWeight: 600, cursor: 'pointer',
+    border: 'none', color: '#94a3b8', fontSize: 13, fontWeight: 600, cursor: 'pointer',
   },
   tabActive: {
     background: 'rgba(124,92,191,0.2)', color: '#c084fc',
@@ -169,7 +169,7 @@ const S = {
     display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14,
     width: '100%',
   },
-  desc: { fontSize: 13, color: '#64748b', margin: 0, textAlign: 'center' },
+  desc: { fontSize: 13, color: '#94a3b8', margin: 0, textAlign: 'center' },
 
   codeBox: {
     background: 'rgba(124,92,191,0.12)',
@@ -187,7 +187,7 @@ const S = {
     borderRadius: '50%', background: '#7c5cbf',
     animation: 'blink 1.2s infinite',
   },
-  waitLabel: { fontSize: 13, color: '#64748b' },
+  waitLabel: { fontSize: 13, color: '#94a3b8' },
 
   codeInput: {
     width: '100%', padding: '14px 18px',
@@ -212,7 +212,7 @@ const S = {
 
   back: {
     marginTop: 4, padding: '8px 24px',
-    background: 'transparent', border: '1px solid #334155',
-    borderRadius: 6, color: '#64748b', cursor: 'pointer', fontSize: 13,
+    background: 'transparent', border: '1px solid #4a5568',
+    borderRadius: 6, color: '#94a3b8', cursor: 'pointer', fontSize: 13,
   },
 };

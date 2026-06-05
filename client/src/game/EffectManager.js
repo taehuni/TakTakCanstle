@@ -37,6 +37,7 @@ export class EffectManager {
       // ── 주술사 저주 ──
       m4_2,
       free77, free79, free63, free72, free76,
+      beastClaw,
     ] = await Promise.all([
       Promise.all(Array.from({ length: 69 }, (_, i) =>
         load(`${BASE_EXP}/round_explosion/PNG/frame${pad(i + 2)}.png`))),
@@ -66,6 +67,8 @@ export class EffectManager {
         load(`${BASE_SLASH}/1 - ${pad2(i)}.png`))),
       // 주술사 저주 파티클
       load(`${BASE_MAGIC}/4_2.png`),
+      // 야수 발톱 이펙트
+      load('/assets/beast.png'),
       // Free 팩
       load(`${BASE_FREE}/77.png`),  // 원형 폭발 — 주술사 피격
       load(`${BASE_FREE}/79.png`),  // 소용돌이 — 주술사 투사체
@@ -102,6 +105,22 @@ export class EffectManager {
     this.strips.dark_blob    = mkStrip(m9, 5);
     this.strips.hex_burst    = mkStrip(m4_2, 4);
     // Free 팩: 9색상 행 구조 (보라 = row 1)
+    // 흰 배경 제거: 밝은 픽셀을 투명하게 처리
+    if (beastClaw) {
+      const oc  = document.createElement('canvas');
+      oc.width  = beastClaw.width;
+      oc.height = beastClaw.height;
+      const oc2 = oc.getContext('2d');
+      oc2.drawImage(beastClaw, 0, 0);
+      const id  = oc2.getImageData(0, 0, oc.width, oc.height);
+      const d   = id.data;
+      for (let i = 0; i < d.length; i += 4) {
+        const whiteness = Math.min(d[i], d[i+1], d[i+2]) / 255;
+        d[i+3] = Math.round(d[i+3] * (1 - whiteness));
+      }
+      oc2.putImageData(id, 0, 0);
+      this.images.beastClaw = oc;
+    }
     this.images.free77 = free77;  // 원형 폭발 (주술사 피격), 10cols
     this.images.free79 = free79;  // 소용돌이 (주술사 투사체), 8cols
     this.images.free63 = free63;  // 별 파티클 (얼음 피격), 7cols

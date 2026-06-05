@@ -4,7 +4,7 @@ import { calcDamage, roleMultiplier } from '../../data/combat.js';
 const RANGED_THRESHOLD = 40;
 
 export class Unit {
-  constructor({ unitId, side, x, y }) {
+  constructor({ unitId, side, x, y, teamCol }) {
     const def = UNIT_DEFS[unitId];
     Object.assign(this, def);
     this.unitId   = unitId;
@@ -24,10 +24,17 @@ export class Unit {
     this.debuffs   = [];
     this.attackAnimTimer = 0; // [{ type:'atk_mult', mult:0.6, timer:5, source:'shaman' }]
 
+    // 색상 변형 선택 — teamCol 있으면 팀 공유, 없으면 개별 랜덤
+    if (Array.isArray(def.tileColRange)) {
+      const idx = teamCol != null
+        ? teamCol % def.tileColRange.length
+        : Math.floor(Math.random() * def.tileColRange.length);
+      this.tileCol = def.tileColRange[idx];
+    }
+
     // ── ability 상태 초기화 ──────────────────────
     if (this.ability === 'phase') {
-      this.phased     = true;   // 유체화 중 = 물리무적 + 벽통과
-      this.hasAttacked = false;
+      this.phased = true; // 유체화 중 = 완전무적 + 벽통과, 선공격 시 해제
     }
     if (this.ability === 'rage') {
       this.enraged = false;
@@ -68,11 +75,10 @@ export class Unit {
     return spd;
   }
 
-  // ── 피해 수신 (phase 무적 / 면역 체크) ───────────
+  // ── 피해 수신 ────────────────────────────────────
   takeDamage(amount, dmgType = 'physical') {
     if (this.dead || this.reviving) return 0;
-    // 유체화 중 → 물리/관통 무효
-    if (this.phased && (dmgType === 'physical' || dmgType === 'pierce')) return 0;
+    if (this.phased) return 0; // 유체화 중 완전 무적
     this.hp -= amount;
     return amount;
   }
@@ -182,15 +188,21 @@ export class Unit {
 
     // ── 타겟 탐색 ─────────────────────────────────
     let unitTarget = null, minDist = Infinity;
+    const isRangedUnit  = this.range >= RANGED_THRESHOLD;
+    const isFlyingAttacker = this.traits?.includes('flying');
     for (const e of enemies) {
       if (e.dead) continue;
+      if (e.phased) continue; // 유체화 중인 유령은 타겟팅 불가
+      // 공중 유닛은 원거리 또는 공중 유닛만 타격 가능
+      if (e.traits?.includes('flying') && !isRangedUnit && !isFlyingAttacker) continue;
       const d = Math.abs(this.x - e.x);
       if (d < minDist) { minDist = d; unitTarget = e; }
     }
 
-    // 유체화 중(ghost)에는 건물 무시
+    // 유체화/공중 유닛은 건물 무시
     let buildTarget = null;
-    if (!this.phased) {
+    const isFlyingSelf = this.traits?.includes('flying');
+    if (!this.phased && !isFlyingSelf) {
       for (const b of enemyBuildings) {
         if (b.dead) continue;
         if (Math.abs(this.x - b.x) <= this.range) { buildTarget = b; break; }
@@ -201,6 +213,7 @@ export class Unit {
       if (this.attackCooldown <= 0) {
         this.attackCooldown = this.cooldown;
         this.attackAnimTimer = Math.min(0.4, this.cooldown * 0.35);
+        this.attackTargetFlying = !!(unitTarget?.traits?.includes('flying')); // 다이브 제어용
         this.state = 'attack';
         this.doAttack(unitTarget, null, null, battle);
       } else if (this.attackAnimTimer <= 0) {
@@ -342,9 +355,10 @@ export class Unit {
     };
 
     if (!isRanged && unitTarget && !unitTarget.dead) {
+      const effectType = this.faction === 'beast' ? 'claw' : 'slash';
       battle.effects.push({
         x: unitTarget.x, y: unitTarget.y - 20,
-        type: 'slash', timer: 0.38, maxTimer: 0.38,
+        type: effectType, timer: 0.4, maxTimer: 0.4,
         flip: this.side === 'enemy',
       });
     }

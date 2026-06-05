@@ -30,7 +30,7 @@ export default function RankScreen({ onBack, currentUid }) {
         <div style={S.board}>
           {loading && <div style={S.status}>불러오는 중...</div>}
           {!loading && ranks.length === 0 && (
-            <div style={S.status}>아직 랭크 기록이 없습니다.<br /><span style={{ fontSize: 11, color: '#333' }}>랭크 게임을 플레이하면 자동으로 등록됩니다.</span></div>
+            <div style={S.status}>아직 랭크 기록이 없습니다.<br /><span style={{ fontSize: 11, color: '#888' }}>랭크 게임을 플레이하면 자동으로 등록됩니다.</span></div>
           )}
           {!loading && ranks.map((s, i) => {
             const tier = getTier(s.lp || 0);
@@ -40,7 +40,7 @@ export default function RankScreen({ onBack, currentUid }) {
                 background: isMe ? 'rgba(124,92,191,0.15)' : i < 3 ? tier.color + '10' : 'rgba(255,255,255,0.02)',
                 borderColor: isMe ? '#7c5cbf' : i < 3 ? tier.color + '35' : '#1a1628',
               }}>
-                <div style={{ ...S.rankNum, color: i < 3 ? tier.color : '#2e2550' }}>
+                <div style={{ ...S.rankNum, color: i < 3 ? tier.color : '#7878a8' }}>
                   {i < 3 ? MEDAL[i] : `#${i + 1}`}
                 </div>
                 <div style={{ ...S.tierBadge, color: tier.color, borderColor: tier.color + '55' }}>
@@ -98,13 +98,13 @@ const S = {
     color: '#ddd', fontSize: 14, fontFamily: 'inherit',
   },
   nameBtn: {
-    background: '#1e1630', border: '1px solid #2e2550', borderRadius: 4,
+    background: '#1e1630', border: '1px solid #7878a8', borderRadius: 4,
     color: '#7c5cbf', fontSize: 11, padding: '4px 10px', cursor: 'pointer',
   },
 
   board: { display: 'flex', flexDirection: 'column', gap: 6 },
   status: {
-    textAlign: 'center', fontSize: 13, color: '#2e2550',
+    textAlign: 'center', fontSize: 13, color: '#7878a8',
     padding: '30px 0', lineHeight: 1.8,
   },
   row: {
@@ -115,7 +115,7 @@ const S = {
   playerName: { flex: 1, fontSize: 13, color: '#ccc', fontWeight: 600, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
   statCell: { display: 'flex', alignItems: 'baseline', gap: 2, minWidth: 50, justifyContent: 'flex-end' },
   statVal:  { fontSize: 14, fontWeight: 700, color: '#aaa' },
-  statUnit: { fontSize: 9, color: '#7070a0' },
+  statUnit: { fontSize: 9, color: '#9090b8' },
   tierBadge: {
     width: 28, textAlign: 'center', fontSize: 16, flexShrink: 0,
     border: '1px solid', borderRadius: 6, padding: '2px 4px',

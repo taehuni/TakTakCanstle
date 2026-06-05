@@ -40,10 +40,10 @@ export default function ResultScreen({ result, onReplay, onMenu, onDogam, onRank
         {/* 점수 (일반 게임) */}
         {!result.isRanked && result.score != null && (
           <div className="anim-2b" style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: 10, color: '#2e2550', letterSpacing: 3, marginBottom: 4 }}>SCORE</div>
+            <div style={{ fontSize: 10, color: '#8878b8', letterSpacing: 3, marginBottom: 4 }}>SCORE</div>
             <div style={{ fontSize: 42, fontWeight: 900, color: '#fde047', lineHeight: 1, textShadow: '0 0 20px #fde04788' }}>
               {result.score}
-              <span style={{ fontSize: 14, color: '#6b6080', marginLeft: 4 }}>pts</span>
+              <span style={{ fontSize: 14, color: '#9090b0', marginLeft: 4 }}>pts</span>
             </div>
           </div>
         )}
@@ -71,7 +71,7 @@ export default function ResultScreen({ result, onReplay, onMenu, onDogam, onRank
                 </span>
               ))}
             </div>
-            <div style={{ fontSize: 10, color: '#2e2550', marginTop: 4, letterSpacing: 1 }}>도감에 등록됨</div>
+            <div style={{ fontSize: 10, color: '#8878b8', marginTop: 4, letterSpacing: 1 }}>도감에 등록됨</div>
           </div>
         )}
 

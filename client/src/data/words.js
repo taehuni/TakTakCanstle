@@ -27,6 +27,12 @@ export const BUILD_WORDS = [
   { word: '주술사',   type: 'unit', unit: 'shaman',       hidden: true },
   { word: '광전사',   type: 'unit', unit: 'berserker',    hidden: true },
   { word: '족장',     type: 'unit', unit: 'warchief',     hidden: true },
+  // 야수
+  { word: '늑대',     type: 'unit', unit: 'wolf',         hidden: true },
+  { word: '곰',       type: 'unit', unit: 'bear',         hidden: true },
+  { word: '독수리',   type: 'unit', unit: 'eagle',        hidden: true },
+  // 용
+  { word: '용',       type: 'unit', unit: 'dragon',       hidden: true },
   // 공용
   { word: '고양이',   type: 'unit', unit: 'cat',          hidden: true },
 ];

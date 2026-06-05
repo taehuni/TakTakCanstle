@@ -14,8 +14,7 @@ export const UNIT_DEFS = {
     hp: 40, maxHp: 40,
     attack: 6, speed: 55, range: 24, cooldown: 1.2,
     def: 2, mdef: 0, dmgType: 'physical', role: 'infantry', faction: 'human', traits: [],
-    ability: 'charge',
-    abilityData: { mult: 1.3 },
+    ability: 'charge', abilityData: { mult: 1.3 },
     sheet: 'tiny-dungeon', tileRow: 7, tileCol: 3,
     weaponSheet: 'tiny-dungeon', weaponRow: 8, weaponCol: 10,
     color: '#4a9eff', enemyColor: '#ff5555',
@@ -56,19 +55,6 @@ export const UNIT_DEFS = {
     weaponSheet: 'tiny-dungeon', weaponRow: 10, weaponCol: 10,
     color: '#c084fc', enemyColor: '#fc84c0',
     size: 16, scale: 3,
-  },
-
-  catapult: {
-    id: 'catapult', name: '투석기',
-    hp: 60, maxHp: 60,
-    attack: 40, speed: 22, range: 250, cooldown: 4.0,
-    def: 3, mdef: 0, dmgType: 'true', role: 'siege', faction: 'human', traits: [],
-    buildingDmgMulti: 3.0,
-    ability: null,
-    sheet: 'tiny-dungeon', tileRow: null, tileCol: null,
-    weaponSheet: null, weaponRow: null, weaponCol: null,
-    color: '#fb923c', enemyColor: '#fb234c',
-    size: 24, scale: 3,
   },
 
   // ══════════════════════════════════════════════
@@ -196,8 +182,7 @@ export const UNIT_DEFS = {
     hp: 85, maxHp: 85,
     attack: 11, speed: 36, range: 26, cooldown: 1.6,
     def: 10, mdef: 8, dmgType: 'holy', role: 'heavy', faction: 'human', traits: ['armored'],
-    ability: 'heal_aura',              // 언데드 ×2.0, 피흡 디버프 — 사제와 함께 뱀파이어 카운터
-    abilityData: { range: 120, healRate: 5 },
+    ability: 'heal_aura', abilityData: { range: 120, healRate: 5 },
     sheet: 'tiny-addon', tileRow: 4, tileCol: 3,
     weaponSheet: null, weaponRow: null, weaponCol: null,
     color: '#fde68a', enemyColor: '#fca5a5',
@@ -209,8 +194,7 @@ export const UNIT_DEFS = {
     hp: 32, maxHp: 32,
     attack: 13, speed: 95, range: 24, cooldown: 1.0,
     def: 1, mdef: 0, dmgType: 'pierce', role: 'infantry', faction: 'human', traits: [],
-    ability: 'charge',
-    abilityData: { mult: 1.8 },
+    ability: 'charge', abilityData: { mult: 1.8 },
     sheet: 'tiny-addon', tileRow: 6, tileCol: 2,
     weaponSheet: null, weaponRow: null, weaponCol: null,
     color: '#94a3b8', enemyColor: '#f87171',
@@ -262,9 +246,10 @@ export const UNIT_DEFS = {
     id: 'bat', name: '박쥐',
     hp: 12, maxHp: 12,
     attack: 6, speed: 100, range: 22, cooldown: 0.8,
-    def: 0, mdef: 0, dmgType: 'physical', role: 'infantry', faction: 'undead', traits: ['undead', 'swarm'],
+    def: 0, mdef: 0, dmgType: 'physical', role: 'infantry', faction: 'undead', traits: ['undead', 'swarm', 'flying'],
     ability: 'triple_spawn',
     abilityData: {},
+    yOffset: -36,
     sheet: 'tiny-addon', tileRow: 8, tileCol: 9,
     weaponSheet: null, weaponRow: null, weaponCol: null,
     color: '#a78bfa', enemyColor: '#c084fc',
@@ -340,8 +325,7 @@ export const UNIT_DEFS = {
     hp: 35, maxHp: 35,
     attack: 14, speed: 38, range: 160, cooldown: 2.2,
     def: 1, mdef: 12, dmgType: 'holy', role: 'mage', faction: 'human', traits: [],
-    ability: 'heal_aura',              // 아군 HP 회복 + 신성 데미지(언데드 2x, spirit 2.5x)
-    abilityData: { range: 110, healRate: 4 },
+    ability: 'heal_aura', abilityData: { range: 110, healRate: 4 },
     sheet: 'tiny-dungeon', tileRow: 7, tileCol: 2,
     weaponSheet: 'tiny-dungeon', weaponRow: 10, weaponCol: 10,
     color: '#fef9c3', enemyColor: '#fca5a5',
@@ -363,6 +347,68 @@ export const UNIT_DEFS = {
     weaponSheet: null, weaponRow: null, weaponCol: null,
     color: '#f9a8d4', enemyColor: '#f472b6',
     size: 16, scale: 3,
+  },
+
+  // ══════════════════════════════════════════════
+  //  야수 진영
+  wolf: {
+    id: 'wolf', name: '늑대',
+    hp: 45, maxHp: 45,
+    attack: 16, speed: 90, range: 26, cooldown: 1.1,
+    def: 1, mdef: 0, dmgType: 'physical', role: 'infantry', faction: 'beast', traits: [],
+    ability: 'charge',
+    abilityData: { mult: 1.8 },
+    sheet: 'tiny-creatures', tileRow: 9, tileCol: 3,
+    weaponSheet: null, weaponRow: null, weaponCol: null,
+    color: '#94a3b8', enemyColor: '#cbd5e1',
+    size: 16, scale: 3,
+  },
+
+  bear: {
+    id: 'bear', name: '곰',
+    hp: 130, maxHp: 130,
+    attack: 22, speed: 28, range: 32, cooldown: 2.0,
+    def: 10, mdef: 0, dmgType: 'physical', role: 'heavy', faction: 'beast', traits: ['armored'],
+    ability: 'rage',
+    abilityData: { threshold: 0.4, atkMult: 2.2, spdMult: 1.6 },
+    sheet: 'tiny-creatures', tileRow: 16, tileCol: 3,
+    weaponSheet: null, weaponRow: null, weaponCol: null,
+    color: '#a16207', enemyColor: '#ca8a04',
+    size: 16, scale: 3,
+  },
+
+  // ══════════════════════════════════════════════
+
+  eagle: {
+    id: 'eagle', name: '독수리',
+    hp: 30, maxHp: 30,
+    attack: 18, speed: 90, range: 30, cooldown: 1.4,
+    def: 0, mdef: 0, dmgType: 'pierce', role: 'infantry', faction: 'beast', traits: ['flying'],
+    ability: 'charge',
+    abilityData: { mult: 1.6 },
+    sheet: 'tiny-creatures', tileRow: 13, tileCol: 4,
+    weaponSheet: null, weaponRow: null, weaponCol: null,
+    color: '#fde047', enemyColor: '#fb923c',
+    size: 16, scale: 3,
+    yOffset: -44,
+  },
+
+  // ══════════════════════════════════════════════
+  //  용 진영
+  // ══════════════════════════════════════════════
+
+  dragon: {
+    id: 'dragon', name: '용',
+    hp: 150, maxHp: 150,
+    attack: 32, speed: 38, range: 180, cooldown: 2.8,
+    def: 8, mdef: 6, dmgType: 'fire', role: 'mage', faction: 'dragon', traits: ['flying'],
+    ability: 'rage',
+    abilityData: { threshold: 0.4, atkMult: 2.0, spdMult: 1.3 },
+    sheet: 'tiny-creatures', tileRow: 3, tileCol: 0, tileColRange: [0, 1, 2, 3, 4],
+    weaponSheet: null, weaponRow: null, weaponCol: null,
+    color: '#fb923c', enemyColor: '#f87171',
+    size: 16, scale: 3,
+    yOffset: -44,
   },
 
   // ── SF 시즌용 탱크 ──────────────────────────────────────

@@ -16,19 +16,19 @@ export default function HowToPlayModal({ onClose }) {
           <div style={S.flowRow}>
             {[
               { icon: '⚒', label: '건설 단계', sub: '30초', color: '#fbbf24', desc: '유닛·건물 소환' },
-              { icon: '→', label: '', sub: '', color: '#444', desc: '' },
+              { icon: '→', label: '', sub: '', color: '#666', desc: '' },
               { icon: '⚔', label: '전투 단계', sub: '120초', color: '#f87171', desc: '마법으로 공격' },
-              { icon: '→', label: '', sub: '', color: '#444', desc: '' },
+              { icon: '→', label: '', sub: '', color: '#666', desc: '' },
               { icon: '🏆', label: '승패 결정', sub: '', color: '#4ade80', desc: '성 파괴 또는 HP 비교' },
             ].map((s, i) => s.label ? (
               <div key={i} style={{ ...S.flowStep, borderColor: s.color + '44', background: s.color + '10' }}>
                 <div style={{ fontSize: 22 }}>{s.icon}</div>
                 <div style={{ fontSize: 13, fontWeight: 800, color: s.color }}>{s.label}</div>
                 {s.sub && <div style={{ fontSize: 10, color: s.color + '99', letterSpacing: 1 }}>{s.sub}</div>}
-                <div style={{ fontSize: 11, color: '#6a6080', marginTop: 2 }}>{s.desc}</div>
+                <div style={{ fontSize: 11, color: '#9090b0', marginTop: 2 }}>{s.desc}</div>
               </div>
             ) : (
-              <div key={i} style={{ fontSize: 20, color: '#333', alignSelf: 'center' }}>›</div>
+              <div key={i} style={{ fontSize: 20, color: '#777', alignSelf: 'center' }}>›</div>
             ))}
           </div>
 
@@ -72,7 +72,7 @@ export default function HowToPlayModal({ onClose }) {
           {/* 승리 조건 */}
           <div style={S.winRow}>
             <WinCard icon="💣" color="#f87171" title="즉시 승리" desc="적의 성 HP를 0으로 만들면 바로 승리" />
-            <div style={{ fontSize: 18, color: '#333', alignSelf: 'center' }}>또는</div>
+            <div style={{ fontSize: 18, color: '#888', alignSelf: 'center' }}>또는</div>
             <WinCard icon="⏱" color="#4ade80" title="시간 종료" desc="120초 후 남은 HP가 더 높은 플레이어 승리" />
           </div>
 
@@ -86,7 +86,7 @@ function Row({ icon, text, color }) {
   return (
     <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', marginBottom: 6 }}>
       <span style={{ fontSize: 13, flexShrink: 0 }}>{icon}</span>
-      <span style={{ fontSize: 12, color: color || '#8888aa', lineHeight: 1.6 }}>{text}</span>
+      <span style={{ fontSize: 12, color: color || '#aaaacc', lineHeight: 1.6 }}>{text}</span>
     </div>
   );
 }
@@ -109,7 +109,7 @@ function WinCard({ icon, color, title, desc }) {
       <span style={{ fontSize: 28 }}>{icon}</span>
       <div>
         <div style={{ fontSize: 13, fontWeight: 800, color, marginBottom: 3 }}>{title}</div>
-        <div style={{ fontSize: 12, color: '#6a6080', lineHeight: 1.5 }}>{desc}</div>
+        <div style={{ fontSize: 12, color: '#9090b0', lineHeight: 1.5 }}>{desc}</div>
       </div>
     </div>
   );

@@ -519,18 +519,16 @@ export class Renderer {
         ctx.restore();
         return;
       } else if (p.type === 'fireball') {
-        ctx.save();
-        ctx.shadowBlur = 36; ctx.shadowColor = '#ff4500';
-        ctx.globalAlpha = 0.35;
-        ctx.fillStyle = '#ff6820';
-        ctx.beginPath(); ctx.arc(p.x, p.y, 22, 0, Math.PI*2); ctx.fill();
-        ctx.globalAlpha = 1;
-        ctx.fillStyle = '#ff4500';
-        ctx.beginPath(); ctx.arc(p.x, p.y, 14, 0, Math.PI*2); ctx.fill();
-        ctx.fillStyle = '#ffe066';
-        ctx.beginPath(); ctx.arc(p.x-4, p.y-4, 6, 0, Math.PI*2); ctx.fill();
-        ctx.restore();
-        return;
+        // 용 브레스: round_explosion 스프라이트, fire보다 크게
+        const img = this.em.getFrameLoop('round_explosion', p.elapsed, 14, 16);
+        if (img) {
+          ctx.save();
+          ctx.imageSmoothingEnabled = false;
+          ctx.shadowBlur = 24; ctx.shadowColor = '#ff4500';
+          ctx.drawImage(img, p.x - 56, p.y - 56, 112, 112);
+          ctx.restore();
+          return;
+        }
       } else if (p.type === 'fire_siege') {
         const img = this.em.getFrameLoop('round_explosion', p.elapsed, 14, 16);
         if (img) {
@@ -634,11 +632,62 @@ export class Renderer {
     const ctx = this.ctx;
     const w = unit.animFrames?.renderW ?? unit.size * unit.scale;
     const h = unit.animFrames?.renderH ?? unit.size * unit.scale;
+
+    // 공중 근접 유닛 다이브+기울기 애니메이션 (지상 타겟만)
+    let yOff = unit.yOffset || 0;
+    let diveAngle = 0;
+    const isDiving = unit.traits?.includes('flying')
+      && unit.attackAnimTimer > 0
+      && yOff < 0
+      && !unit.attackTargetFlying  // 공중 타겟 공격 시 다이브 없음
+      && (unit.range || 0) < 40;   // 근접 공중 유닛만
+
+    if (isDiving) {
+      const maxT = Math.min(0.4, (unit.cooldown || 1) * 0.35);
+      const t    = unit.attackAnimTimer / maxT;     // 1→0
+      const dive = Math.sin(t * Math.PI);           // 0→1→0
+      yOff       = yOff * (1 - dive);               // -44→0→-44
+      // 기울기: 플레이어는 오른쪽(전방), 적은 왼쪽
+      diveAngle  = (unit.side === 'player' ? 1 : -1) * dive * 0.5;
+    }
+
     const x = unit.x - w / 2;
-    const y = unit.y - h + (unit.walkBob || 0) + (unit.yOffset || 0);
+    const y = unit.y - h + (unit.walkBob || 0) + yOff;
     const color = unit.side === 'player' ? unit.color : unit.enemyColor;
 
     const flip = unit.side === 'enemy';
+
+    // 공중 유닛 그림자 (다이브 중엔 그림자 진해짐)
+    if (unit.traits?.includes('flying')) {
+      const baseY   = unit.yOffset || 0;
+      const diveAmt = baseY !== 0 ? (yOff - baseY) / (0 - baseY) : 0; // 0=공중, 1=지면
+      const alpha   = 0.12 + diveAmt * 0.25;
+      const scaleX  = 0.5 + diveAmt * 0.3;
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = '#000';
+      ctx.beginPath();
+      ctx.ellipse(unit.x, unit.y - 2, w * scaleX, 3 + diveAmt * 3, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    // 다이브 기울기 transform
+    if (diveAngle !== 0) {
+      ctx.save();
+      ctx.translate(unit.x, unit.y - h / 2 + yOff);
+      ctx.rotate(diveAngle);
+      ctx.translate(-unit.x, -(unit.y - h / 2 + yOff));
+    }
+
+    // 유체화 중: 반투명 + 파란 글로우
+    const isPhased = unit.ability === 'phase' && unit.phased;
+    if (isPhased) {
+      ctx.save();
+      ctx.globalAlpha = 0.32;
+      ctx.shadowBlur = 14;
+      ctx.shadowColor = '#a5f3fc';
+    }
 
     // 캐릭터 그리기
     let drawn = false;
@@ -738,6 +787,9 @@ export class Renderer {
       ctx.strokeRect(x, y, w, h);
       ctx.restore();
     }
+
+    if (isPhased)    ctx.restore();
+    if (diveAngle !== 0) ctx.restore();
   }
 
   drawCat(cat) {
@@ -1099,6 +1151,26 @@ export class Renderer {
       ctx.strokeStyle = '#818cf8'; ctx.lineWidth = 2;
       ctx.beginPath(); ctx.arc(e.x, e.y, 14 + (1-a)*14, 0, Math.PI*2); ctx.stroke();
 
+    } else if (e.type === 'claw') {
+      const img = this.em?.images?.beastClaw;
+      if (img) {
+        const a = Math.max(0, e.timer / e.maxTimer);
+        const scale = 0.6 + (1 - a) * 0.5;
+        const sz = 110 * scale;
+        ctx.save();
+        ctx.imageSmoothingEnabled = true;
+        ctx.globalAlpha = a;
+        if (e.flip) {
+          ctx.translate(e.x + sz / 2, e.y);
+          ctx.scale(-1, 1);
+          ctx.drawImage(img, -sz / 2, -sz / 2, sz, sz);
+        } else {
+          ctx.drawImage(img, e.x - sz / 2, e.y - sz / 2, sz, sz);
+        }
+        ctx.restore();
+        return;
+      }
+      // fallback: 슬래시로
     } else if (e.type === 'slash') {
       if (this.em?.loaded && e.maxTimer) {
         const progress = Math.min(1, 1 - e.timer / e.maxTimer);

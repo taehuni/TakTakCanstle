@@ -1,4 +1,25 @@
 import { BUILD_WORDS } from '../../data/words.js';
+import { UNIT_DEFS } from '../../data/units.js';
+
+// AI 가중치: 강한 유닛일수록 높은 확률로 선택
+const AI_WEIGHTS = BUILD_WORDS.map(w => {
+  if (w.type === 'building') return { w, weight: 2 }; // 성벽도 가끔 세움
+  const def = UNIT_DEFS[w.unit];
+  if (!def) return { w, weight: 1 };
+  // 스탯 합산으로 가중치 결정
+  const score = (def.attack || 0) + (def.hp || 0) / 10 + (def.speed || 0) / 5;
+  return { w, weight: Math.max(1, Math.floor(score / 8)) };
+});
+const AI_TOTAL_WEIGHT = AI_WEIGHTS.reduce((s, x) => s + x.weight, 0);
+
+function pickWeightedWord() {
+  let r = Math.random() * AI_TOTAL_WEIGHT;
+  for (const { w, weight } of AI_WEIGHTS) {
+    r -= weight;
+    if (r <= 0) return w;
+  }
+  return AI_WEIGHTS[AI_WEIGHTS.length - 1].w;
+}
 
 export class BuildPhase {
   static BUILD_WORDS = BUILD_WORDS;
@@ -11,7 +32,7 @@ export class BuildPhase {
     this.wordsTyped = 0;
     this.startTime = 0;
     this.aiTimer = 0;
-    this.aiInterval = 2.5;
+    this.aiInterval = 1.5;
     this.aiEnabled = true;
   }
 
@@ -28,7 +49,7 @@ export class BuildPhase {
       this.aiTimer += dt;
       if (this.aiTimer >= this.aiInterval) {
         this.aiTimer = 0;
-        this.aiInterval = 2.0 + Math.random() * 1.5;
+        this.aiInterval = 1.0 + Math.random() * 1.0; // 1.0~2.0초 (기존 2.0~3.5s)
         this.aiType();
       }
     }
@@ -51,7 +72,8 @@ export class BuildPhase {
   }
 
   aiType() {
-    const w = BUILD_WORDS[Math.floor(Math.random() * BUILD_WORDS.length)];
+    // 가중치 기반 선택 — 강한 유닛 선호
+    const w = pickWeightedWord();
     this.spawn('enemy', w);
   }
 

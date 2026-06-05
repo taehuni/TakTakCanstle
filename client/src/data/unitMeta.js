@@ -23,4 +23,8 @@ export const UNIT_META = {
   berserker:   { label: '광전사',  color: '#f97316' },
   warchief:    { label: '족장',    color: '#22c55e' },
   cat:         { label: '고양이',  color: '#f9a8d4' },
+  wolf:        { label: '늑대',    color: '#94a3b8' },
+  bear:        { label: '곰',      color: '#a16207' },
+  eagle:       { label: '독수리',  color: '#fde047' },
+  dragon:      { label: '용',      color: '#fb923c' },
 };

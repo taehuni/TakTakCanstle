@@ -114,17 +114,24 @@ export default function App() {
   const [rematchStatus, setRematchStatus] = useState(null); // null | 'waiting' | 'opponent_ready' | 'disconnected'
   const pendingAction             = useRef(null);
   const bgmRef                    = useRef(null);
+  const [muted, setMuted]         = useState(false);
 
-  // BGM: 첫 클릭 시 재생 (브라우저 autoplay 정책 대응)
+  // BGM: 게임 화면에서만 재생
   useEffect(() => {
-    const bgm = new Audio('/assets/sound/(LOOP-READY) Track 8 - Upper Quarter_3.mp3');
-    bgm.loop   = true;
-    bgm.volume = 0.35;
-    bgmRef.current = bgm;
-    const start = () => { bgm.play().catch(() => {}); document.removeEventListener('click', start); };
-    document.addEventListener('click', start);
-    return () => { bgm.pause(); document.removeEventListener('click', start); };
-  }, []);
+    if (!bgmRef.current) {
+      const bgm = new Audio('/assets/sound/(LOOP-READY) Track 8 - Upper Quarter_3.mp3');
+      bgm.loop   = true;
+      bgm.volume = 0.35;
+      bgmRef.current = bgm;
+    }
+    const bgm = bgmRef.current;
+    if (screen === 'game' && !muted) {
+      bgm.play().catch(() => {});
+    } else {
+      bgm.pause();
+    }
+    return () => bgm.pause();
+  }, [screen, muted]);
 
   useEffect(() => {
     return onAuthStateChanged(auth, u => {
@@ -226,6 +233,23 @@ export default function App() {
     }}>
       {/* 항상 배경 패턴 표시 */}
       <PatternBackground />
+
+      {/* 전역 뮤트 버튼 (메뉴·게임 화면) */}
+      {(screen === 'menu' || screen === 'game') && (
+        <button
+          onClick={() => setMuted(m => !m)}
+          title={muted ? '소리 켜기' : '소리 끄기'}
+          style={{
+            position: 'fixed', top: 12, left: 14, zIndex: 2000,
+            fontSize: 16, width: 34, height: 34,
+            borderRadius: 6, cursor: 'pointer',
+            background: muted ? 'rgba(248,113,113,0.15)' : 'rgba(255,255,255,0.07)',
+            border: `1px solid ${muted ? 'rgba(248,113,113,0.4)' : 'rgba(255,255,255,0.15)'}`,
+            color: muted ? '#f87171' : '#aaa',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}
+        >{muted ? '🔇' : '🔊'}</button>
+      )}
 
       <div style={{
         display: 'flex',

@@ -55,12 +55,11 @@ export default function MainMenu({ onStart, onMulti, onRanked, onCustom, onDogam
           <span style={S.navLogoSub}>TAKTAK CASTLE</span>
         </div>
         <div style={S.navCenter}>
-          <span style={S.navLink}>게임 소개</span>
           <span style={S.navLinkActive} onClick={onDogam}>유닛 도감</span>
           <span style={S.navLinkActive} onClick={onRank}>랭킹</span>
         </div>
         <div style={S.navRight}>
-          <span style={S.navCompBadge}>🏆 대건령 공모전 출품작</span>
+          <span style={S.navCompBadge}>🏆 데이콘 웹 미니게임 챌린지 출품작</span>
           {user
             ? <>
                 <span style={S.navUser}>👤 {user.displayName}</span>
@@ -127,7 +126,7 @@ export default function MainMenu({ onStart, onMulti, onRanked, onCustom, onDogam
             <p style={{ ...S.sectionDesc, marginTop: 12, fontSize: 16 }}>
               강력한 게 소환될지도 모른다
             </p>
-            <p style={{ ...S.sectionDesc, marginTop: 8, color: 'rgba(180,210,240,0.35)' }}>
+            <p style={{ ...S.sectionDesc, marginTop: 8, color: '#a8c8e0' }}>
               어떤 단어든 — 그게 소환 주문이 될 수 있다
             </p>
           </div>
@@ -189,7 +188,7 @@ export default function MainMenu({ onStart, onMulti, onRanked, onCustom, onDogam
       {/* ── 푸터 ── */}
       <footer style={S.footer}>
         <div style={S.footerLogo}>⌨ 탁탁성</div>
-        <div style={S.footerText}>© 2025 탁탁성 · 대건령 웹 미니게임 공모전 출품작</div>
+        <div style={S.footerText}>© 2025 탁탁성 · 데이콘 월간 해커톤 웹 미니게임 챌린지 출품작</div>
       </footer>
     </div>
   );
@@ -209,7 +208,6 @@ const UNITS = [
   { id: 'archer',    label: '궁수',   word: '궁수',   icon: '🏹', color: '#4ade80', stat: '원거리 사수' },
   { id: 'knight',    label: '기사',   word: '기사',   icon: '🛡', color: '#fbbf24', stat: '중장갑 돌격' },
   { id: 'wizard',    label: '마법사', word: '마법사', icon: '🔮', color: '#c084fc', stat: '원거리 마법' },
-  { id: 'catapult',  label: '투석기', word: '투석기', icon: '🪨', color: '#fb923c', stat: '건물 파괴 x3' },
   { id: 'wall',      label: '성벽',   word: '성벽',   icon: '🏯', color: '#94a3b8', stat: 'HP 400 방어벽' },
 ];
 
@@ -248,9 +246,9 @@ const S = {
   navLogo: { display: 'flex', alignItems: 'center', gap: 10 },
   navLogoMark: { fontSize: 22, color: '#fbbf24' },
   navLogoName: { fontSize: 20, fontWeight: 900, color: '#fff', letterSpacing: 1 },
-  navLogoSub: { fontSize: 9, color: 'rgba(255,255,255,0.3)', letterSpacing: 4, marginLeft: 4, marginTop: 2 },
+  navLogoSub: { fontSize: 9, color: '#a0b8d0', letterSpacing: 4, marginLeft: 4, marginTop: 2 },
   navCenter: { display: 'flex', gap: 8 },
-  navLink: { fontSize: 13, color: 'rgba(180,210,240,0.45)', letterSpacing: 0.5, padding: '6px 14px' },
+  navLink: { fontSize: 13, color: '#b8d4ec', letterSpacing: 0.5, padding: '6px 14px' },
   navLinkActive: {
     fontSize: 13, fontWeight: 700, letterSpacing: 0.5, cursor: 'pointer',
     padding: '7px 18px', borderRadius: 7,
@@ -260,7 +258,7 @@ const S = {
     transition: 'all 0.15s',
   },
   navRight: { display: 'flex', alignItems: 'center', gap: 10 },
-  navUser: { fontSize: 12, color: 'rgba(180,210,240,0.6)', letterSpacing: 0.3 },
+  navUser: { fontSize: 12, color: '#c0d8f0', letterSpacing: 0.3 },
   navLoginBtn: {
     padding: '7px 16px', background: 'rgba(124,92,191,0.2)',
     border: '1px solid rgba(124,92,191,0.4)', borderRadius: 7,
@@ -269,7 +267,7 @@ const S = {
   navLogoutBtn: {
     padding: '7px 14px', background: 'rgba(255,255,255,0.05)',
     border: '1px solid rgba(255,255,255,0.12)', borderRadius: 7,
-    color: 'rgba(180,210,240,0.5)', fontSize: 12, cursor: 'pointer',
+    color: '#c0d8f0', fontSize: 12, cursor: 'pointer',
   },
   navCompBadge: {
     fontSize: 11, color: '#fbbf24', background: 'rgba(251,191,36,0.12)',
@@ -323,7 +321,7 @@ const S = {
     filter: 'drop-shadow(0 0 36px rgba(251,191,36,0.5))',
   },
   heroDesc: {
-    fontSize: 17, color: 'rgba(200,225,255,0.78)', lineHeight: 1.7, textAlign: 'center', margin: 0,
+    fontSize: 17, color: '#c0d8f8', lineHeight: 1.7, textAlign: 'center', margin: 0,
   },
   heroHighlight: { color: '#f87171', fontWeight: 700 },
   heroBtns: { display: 'flex', gap: 14, marginTop: 8 },
@@ -345,11 +343,11 @@ const S = {
     padding: '16px 36px',
     background: 'rgba(255,255,255,0.08)',
     border: '1px solid rgba(255,255,255,0.18)', borderRadius: 10,
-    color: 'rgba(200,225,255,0.85)', fontSize: 15, cursor: 'pointer',
+    color: '#c8dcfa', fontSize: 15, cursor: 'pointer',
   },
   heroMeta: { display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 },
-  heroMetaItem: { fontSize: 12, color: 'rgba(180,210,240,0.45)' },
-  heroMetaDot: { color: 'rgba(180,210,240,0.2)', fontSize: 12 },
+  heroMetaItem: { fontSize: 12, color: '#b8d4ec' },
+  heroMetaDot: { color: '#a0c0d8', fontSize: 12 },
 
   /* 특징 카드 */
   features: {
@@ -368,7 +366,7 @@ const S = {
     display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20,
   },
   featTitle: { fontSize: 15, fontWeight: 800, letterSpacing: 0.5 },
-  featDesc:  { fontSize: 13, color: 'rgba(180,210,240,0.5)', lineHeight: 1.7 },
+  featDesc:  { fontSize: 13, color: '#c0d8f0', lineHeight: 1.7 },
 
   /* 쇼케이스 */
   showcase: {
@@ -380,7 +378,7 @@ const S = {
   sectionHeader: { textAlign: 'center', marginBottom: 40 },
   sectionEyebrow: { fontSize: 10, color: '#fbbf24', fontWeight: 700, letterSpacing: 4, marginBottom: 8 },
   sectionTitle: { fontSize: 28, fontWeight: 900, color: '#fff', letterSpacing: 1, marginBottom: 8, margin: 0 },
-  sectionDesc: { fontSize: 14, color: 'rgba(180,210,240,0.5)', marginTop: 8 },
+  sectionDesc: { fontSize: 14, color: '#c0d8f0', marginTop: 8 },
   unitGrid: { display: 'grid', gridTemplateColumns: 'repeat(6,1fr)', gap: 12 },
   unitCard: {
     padding: '20px 12px',
@@ -398,7 +396,7 @@ const S = {
     fontSize: 12, border: '1px solid', borderRadius: 6,
     padding: '3px 10px', fontWeight: 700, letterSpacing: 1,
   },
-  unitStat: { fontSize: 11, color: 'rgba(180,210,240,0.4)', textAlign: 'center', lineHeight: 1.4 },
+  unitStat: { fontSize: 11, color: '#90b0c8', textAlign: 'center', lineHeight: 1.4 },
 
   /* 정보 2열 */
   infoRow: {
@@ -419,8 +417,8 @@ const S = {
   },
   discoveryIcon: { fontSize: 22, lineHeight: 1, paddingTop: 2, flexShrink: 0 },
   discoveryHint: { fontSize: 13, fontWeight: 700, marginBottom: 2 },
-  discoveryMystery: { fontSize: 12, color: 'rgba(180,210,240,0.45)', lineHeight: 1.5 },
-  discoveryFooter: { marginTop: 24, fontSize: 13, color: 'rgba(180,210,240,0.45)', lineHeight: 1.8 },
+  discoveryMystery: { fontSize: 12, color: '#b8d4ec', lineHeight: 1.5 },
+  discoveryFooter: { marginTop: 24, fontSize: 13, color: '#b8d4ec', lineHeight: 1.8 },
 
   controlList: { display: 'flex', flexDirection: 'column', gap: 14 },
   controlItem: { display: 'flex', alignItems: 'flex-start', gap: 14 },
@@ -430,7 +428,7 @@ const S = {
   },
   controlText: { display: 'flex', flexDirection: 'column', gap: 2 },
   controlTitle: { fontSize: 14, fontWeight: 700, color: '#e2e8f8' },
-  controlDesc:  { fontSize: 12, color: 'rgba(180,210,240,0.45)', lineHeight: 1.5 },
+  controlDesc:  { fontSize: 12, color: '#b8d4ec', lineHeight: 1.5 },
 
   /* 하단 CTA */
   ctaSection: {
@@ -449,7 +447,7 @@ const S = {
     fontSize: 44, fontWeight: 900, color: '#fff', letterSpacing: 3,
     margin: '0 0 10px', textShadow: '0 0 40px rgba(56,189,248,0.3)',
   },
-  ctaDesc: { fontSize: 16, color: 'rgba(180,210,240,0.55)', marginBottom: 32, letterSpacing: 1 },
+  ctaDesc: { fontSize: 16, color: '#a0c0d8', marginBottom: 32, letterSpacing: 1 },
   ctaBtn: {
     padding: '18px 56px',
     background: 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)',
@@ -465,6 +463,6 @@ const S = {
     background: 'rgba(0,0,0,0.3)',
     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
   },
-  footerLogo: { fontSize: 16, fontWeight: 900, color: 'rgba(180,210,240,0.25)', letterSpacing: 1 },
-  footerText: { fontSize: 11, color: 'rgba(180,210,240,0.2)', letterSpacing: 0.5 },
+  footerLogo: { fontSize: 16, fontWeight: 900, color: '#7090a8', letterSpacing: 1 },
+  footerText: { fontSize: 11, color: '#a0c0d8', letterSpacing: 0.5 },
 };

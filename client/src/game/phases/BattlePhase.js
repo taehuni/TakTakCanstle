@@ -51,19 +51,25 @@ export class BattlePhase {
     this.spellCooldowns = {};
 
     this._startedAt   = Date.now();
-    this.aiSpellTimer = 8 + Math.random() * 7; // 첫 마법: 8~15초 후
+    this.aiSpellTimer = 4 + Math.random() * 4; // 첫 마법: 4~8초 후
 
     this.initArmy(army);
   }
 
   initArmy(army) {
+    // 팀별 색상 변형 인덱스 사전 결정 (같은 팀 용은 같은 색)
+    const teamCol = {
+      player: Math.floor(Math.random() * 5),
+      enemy:  Math.floor(Math.random() * 5),
+    };
+
     let pi = 0, ei = 0;
     army.player.forEach(def => {
       if (def.type === 'unit') {
         const spawnCount = { double_spawn: 2, triple_spawn: 3 };
         const count = spawnCount[UNIT_DEFS[def.unitId]?.ability] ?? 1;
         for (let s = 0; s < count; s++) {
-          this.playerUnits.push(new Unit({ unitId: def.unitId, side: 'player', x: PLAYER_SPAWN_X + pi * 10, y: UNIT_Y }));
+          this.playerUnits.push(new Unit({ unitId: def.unitId, side: 'player', x: PLAYER_SPAWN_X + pi * 10, y: UNIT_Y, teamCol: teamCol.player }));
           pi++;
         }
       } else {
@@ -75,7 +81,7 @@ export class BattlePhase {
         const spawnCount = { double_spawn: 2, triple_spawn: 3 };
         const count = spawnCount[UNIT_DEFS[def.unitId]?.ability] ?? 1;
         for (let s = 0; s < count; s++) {
-          this.enemyUnits.push(new Unit({ unitId: def.unitId, side: 'enemy', x: ENEMY_SPAWN_X - ei * 10, y: UNIT_Y }));
+          this.enemyUnits.push(new Unit({ unitId: def.unitId, side: 'enemy', x: ENEMY_SPAWN_X - ei * 10, y: UNIT_Y, teamCol: teamCol.enemy }));
           ei++;
         }
       } else {
@@ -159,7 +165,7 @@ export class BattlePhase {
       this.aiSpellTimer -= dt;
       if (this.aiSpellTimer <= 0) {
         this._castAiSpell();
-        this.aiSpellTimer = 8 + Math.random() * 12; // 다음 마법: 8~20초 후
+        this.aiSpellTimer = 4 + Math.random() * 7;  // 다음 마법: 4~11초 후
       }
     }
 
@@ -304,12 +310,13 @@ export class BattlePhase {
       wizard: 'arcane',
       lich: 'dark_magic',
       shaman: 'curse',
-      catapult: 'explosion',
       priest: 'holy', paladin: 'holy',
+      dragon: 'fireball',
+      eagle: 'arrow',
     };
     const type = typeMap[unitId] || 'arrow';
-    const speed = unitId === 'catapult' ? 110
-      : (unitId === 'wizard' || unitId === 'lich' || unitId === 'shaman') ? 220 : 280;
+    const slowUnits = ['wizard', 'lich', 'shaman', 'dragon'];
+    const speed = slowUnits.includes(unitId) ? 200 : 300;
 
     const wrappedOnHit = () => {
       onHit?.();
