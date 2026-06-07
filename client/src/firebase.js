@@ -11,6 +11,14 @@ const firebaseConfig = {
   appId:             import.meta.env.VITE_FIREBASE_APP_ID,
 };
 
-const app = initializeApp(firebaseConfig);
-export const db   = getFirestore(app);
-export const auth = getAuth(app);
+let app, db, auth;
+try {
+  app  = initializeApp(firebaseConfig);
+  db   = getFirestore(app);
+  auth = getAuth(app);
+} catch (e) {
+  console.warn('[Firebase] 초기화 실패 — 싱글플레이만 가능:', e.message);
+  db   = null;
+  auth = null;
+}
+export { db, auth };

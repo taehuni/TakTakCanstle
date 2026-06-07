@@ -134,6 +134,7 @@ export default function App() {
   }, [screen, muted]);
 
   useEffect(() => {
+    if (!auth) { setUser(null); return; }
     return onAuthStateChanged(auth, u => {
       setUser(u);
       if (u) {
@@ -156,7 +157,7 @@ export default function App() {
 
   const [matchMode, setMatchMode] = useState('normal'); // 'normal' | 'ranked'
 
-  const goGame      = () => requireAuth(() => { setGameKey(k => k + 1); setScreen('game'); });
+  const goGame      = () => { setGameKey(k => k + 1); setScreen('game'); };
   const goMulti     = () => requireAuth(() => { setMatchMode('normal'); setScreen('matchmaking'); });
   const goRanked    = () => requireAuth(() => { setMatchMode('ranked'); setScreen('matchmaking'); });
   const goCustom    = () => requireAuth(() => setScreen('custom'));
