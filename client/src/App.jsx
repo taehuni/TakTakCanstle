@@ -238,6 +238,7 @@ export default function App() {
       {/* 전역 뮤트 버튼 (메뉴·게임 화면) */}
       {(screen === 'menu' || screen === 'game') && (
         <button
+          type="button"
           onClick={() => setMuted(m => !m)}
           title={muted ? '소리 켜기' : '소리 끄기'}
           style={{
