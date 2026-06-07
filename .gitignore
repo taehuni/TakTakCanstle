@@ -5,16 +5,7 @@ dist/
 client/.env
 client/.env.local
 
-# 에셋 (라이선스상 재배포 금지)
-client/public/assets/sprites/
 client/dist/
-
-# 이미지
-*.png
-*.jpg
-*.jpeg
-*.gif
-*.webp
 DefencePng/
 
 # OS
