@@ -2,10 +2,21 @@ import express from 'express';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import cors from 'cors';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+import { existsSync } from 'fs';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const distPath = join(__dirname, '../../client/dist');
 
 const app = express();
-app.use(cors({ origin: process.env.CORS_ORIGIN || 'http://localhost:5173' }));
+app.use(cors({ origin: process.env.CORS_ORIGIN || '*' }));
 app.use(express.json());
+
+// 프론트엔드 정적 파일 서빙 (빌드된 경우)
+if (existsSync(distPath)) {
+  app.use(express.static(distPath));
+}
 
 const http = createServer(app);
 const io = new Server(http, { cors: { origin: process.env.CORS_ORIGIN || 'http://localhost:5173' } });
@@ -194,6 +205,11 @@ io.on('connection', (socket) => {
     console.log('[-]', socket.id);
   });
 });
+
+// SPA 라우팅: 나머지 요청은 index.html로
+if (existsSync(distPath)) {
+  app.get('*', (_, res) => res.sendFile(join(distPath, 'index.html')));
+}
 
 const PORT = process.env.PORT || 3001;
 http.listen(PORT, () => console.log(`server :${PORT}`));

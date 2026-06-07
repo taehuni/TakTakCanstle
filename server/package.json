@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "node --watch src/index.js",
-    "start": "node src/index.js"
+    "start": "node src/index.js",
+    "build": "cd ../client && npm install && npm run build"
   },
   "dependencies": {
     "express": "^4.19.0",

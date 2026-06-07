@@ -125,6 +125,8 @@ export class GameEngine {
         playerArmy: [...this.buildPhase.playerArmy],
         playerArmyCount: this.buildPhase.playerArmy.length,
         enemyArmyCount: this.buildPhase.enemyArmy.length,
+        playerUnits: [],
+        playerBuildings: [],
       });
     } else if (this.phase === 'battle') {
       const b = this.battlePhase;
@@ -135,7 +137,7 @@ export class GameEngine {
         playerMaxHp: b.playerCastle.maxHp,
         enemyHp: b.enemyCastle.hp,
         enemyMaxHp: b.enemyCastle.maxHp,
-        playerUnits: b.playerUnits.map(u => ({ unitId: u.unitId, hp: u.hp, maxHp: u.maxHp })),
+        playerUnits: b.playerUnits.map(u => ({ uid: u.uid, unitId: u.unitId, hp: u.hp, maxHp: u.maxHp })),
         playerBuildings: b.playerBuildings.map(bl => ({ buildingId: bl.buildingId, hp: bl.hp, maxHp: bl.maxHp })),
         newKills: b.newKills.splice(0),
         spellCooldowns: { ...b.spellCooldowns },

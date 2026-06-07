@@ -2,11 +2,13 @@ import { UNIT_DEFS } from '../../data/units.js';
 import { calcDamage, roleMultiplier } from '../../data/combat.js';
 
 const RANGED_THRESHOLD = 40;
+let _uidCounter = 0;
 
 export class Unit {
   constructor({ unitId, side, x, y, teamCol }) {
     const def = UNIT_DEFS[unitId];
     Object.assign(this, def);
+    this.uid      = _uidCounter++;
     this.unitId   = unitId;
     this.side     = side;
     this.x        = x;
@@ -17,6 +19,7 @@ export class Unit {
     this.attackCooldown = 0;
     this.animTimer      = 0;
     this.walkBob        = 0;
+    this.facingLeft = (side === 'enemy'); // 스프라이트 방향: true=왼쪽, false=오른쪽
 
     // 버프/디버프
     this.speedBuff = 1;
@@ -46,6 +49,9 @@ export class Unit {
     }
     if (this.ability === 'charge') {
       this.hasCharged = false;
+    }
+    if (this.ability === 'blink') {
+      this._hasBlinked = false;
     }
     if (this.ability === 'poison') {
       // 독 DoT 틱은 debuffs로 관리
@@ -158,7 +164,7 @@ export class Unit {
     const enemyBuildings = this.side === 'player' ? battle.enemyBuildings  : battle.playerBuildings;
     const castle         = this.side === 'player' ? battle.enemyCastle     : battle.playerCastle;
     const castleX        = this.side === 'player' ? 1155 : 45;
-    const dir            = this.side === 'player' ? 1 : -1;
+    const dir = this.side === 'player' ? 1 : -1;
 
     // ── kamikaze: 근접 시 자폭 ────────────────────
     if (this.ability === 'kamikaze') {
@@ -171,13 +177,15 @@ export class Unit {
 
       if (triggered) {
         const dmg = this.attack;
-        const allTargets = [...enemies, ...enemyBuildings];
+        const maxTargets = this.abilityData?.maxTargets ?? 3;
+        const allTargets = [...enemies, ...enemyBuildings]
+          .filter(t => !t.dead && Math.abs(this.x - t.x) < aoeRange)
+          .sort((a, b) => Math.abs(this.x - a.x) - Math.abs(this.x - b.x)) // 가까운 순
+          .slice(0, maxTargets);
         for (const t of allTargets) {
-          if (!t.dead && Math.abs(this.x - t.x) < aoeRange) {
-            const d = calcDamage(dmg, 'fire', t.def || 0, t.mdef || 0, t.traits || []);
-            t.takeDamage ? t.takeDamage(d, 'fire') : (t.hp -= d);
-            if (t.hp <= 0 && !t.dead) t.dead = true;
-          }
+          const d = calcDamage(dmg, 'fire', t.def || 0, t.mdef || 0, t.traits || []);
+          t.takeDamage ? t.takeDamage(d, 'fire') : (t.hp -= d);
+          if (t.hp <= 0 && !t.dead) t.dead = true;
         }
         if (Math.abs(this.x - castleX) < aoeRange) castle.hp -= Math.floor(dmg * 0.5);
         battle.effects.push({ x: this.x, y: this.y - 30, type: 'explosion', timer: 0.9, maxTimer: 0.9 });
@@ -190,10 +198,9 @@ export class Unit {
     let unitTarget = null, minDist = Infinity;
     const isRangedUnit  = this.range >= RANGED_THRESHOLD;
     const isFlyingAttacker = this.traits?.includes('flying');
+
     for (const e of enemies) {
-      if (e.dead) continue;
-      if (e.phased) continue; // 유체화 중인 유령은 타겟팅 불가
-      // 공중 유닛은 원거리 또는 공중 유닛만 타격 가능
+      if (e.dead || e.phased) continue;
       if (e.traits?.includes('flying') && !isRangedUnit && !isFlyingAttacker) continue;
       const d = Math.abs(this.x - e.x);
       if (d < minDist) { minDist = d; unitTarget = e; }
@@ -209,11 +216,54 @@ export class Unit {
       }
     }
 
+    // ── 바라보는 방향 결정 ──────────────────────────
+    if (unitTarget && minDist <= this.range) {
+      this.facingLeft = unitTarget.x < this.x;
+    } else if (buildTarget) {
+      this.facingLeft = buildTarget.x < this.x;
+    } else if (Math.abs(this.x - castleX) <= this.range) {
+      this.facingLeft = castleX < this.x;
+    } else {
+      this.facingLeft = dir < 0;
+    }
+
+    // ── blink: 블링크 완료 후 근접 추적 공격 ─────────
+    if (this.ability === 'blink' && this._hasBlinked) {
+      if (unitTarget) {
+        this.facingLeft = unitTarget.x < this.x;
+        const MELEE = 32;
+        if (minDist <= MELEE) {
+          if (this.attackCooldown <= 0) {
+            this.attackCooldown = this.cooldown;
+            this.attackAnimTimer = Math.min(0.4, this.cooldown * 0.35);
+            this.state = 'attack';
+            this.doAttack(unitTarget, null, null, battle);
+          } else if (this.attackAnimTimer <= 0) {
+            this.state = 'idle';
+          }
+        } else if (minDist <= 300) {
+          // 300px 이내 적만 추격
+          this.state = 'walk';
+          const chaseDir = unitTarget.x > this.x ? 1 : -1;
+          this.x += chaseDir * this.effectiveSpeed * dt;
+        } else {
+          // 너무 멀면 성 방향으로 전진
+          this.state = 'walk';
+          this.x += dir * this.effectiveSpeed * dt;
+        }
+      } else {
+        // 적 없으면 성 방향으로 전진
+        this.state = 'walk';
+        this.x += dir * this.effectiveSpeed * dt;
+      }
+      return;
+    }
+
     if (unitTarget && minDist <= this.range) {
       if (this.attackCooldown <= 0) {
         this.attackCooldown = this.cooldown;
         this.attackAnimTimer = Math.min(0.4, this.cooldown * 0.35);
-        this.attackTargetFlying = !!(unitTarget?.traits?.includes('flying')); // 다이브 제어용
+        this.attackTargetFlying = !!(unitTarget?.traits?.includes('flying'));
         this.state = 'attack';
         this.doAttack(unitTarget, null, null, battle);
       } else if (this.attackAnimTimer <= 0) {
@@ -252,7 +302,14 @@ export class Unit {
         }
       }
 
-      this.x += dir * this.effectiveSpeed * dt;
+      // 근접 유닛 한정: 가까운 적이 등 뒤에 있으면 돌아서서 추격
+      const REACT_RANGE = 80;
+      if (unitTarget && this.range < RANGED_THRESHOLD && minDist <= REACT_RANGE) {
+        const chaseDir = unitTarget.x > this.x ? 1 : -1;
+        this.x += chaseDir * this.effectiveSpeed * dt;
+      } else {
+        this.x += dir * this.effectiveSpeed * dt;
+      }
     }
   }
 
@@ -301,6 +358,7 @@ export class Unit {
     }
 
     const applyHit = (target, dmgMult = 1) => {
+
       if (!target || target.dead) return 0;
       const roleMult = roleMultiplier(this.role, target.role);
       const raw = Math.floor(atkOverride * dmgMult * roleMult);
@@ -355,12 +413,44 @@ export class Unit {
     };
 
     if (!isRanged && unitTarget && !unitTarget.dead) {
-      const effectType = this.faction === 'beast' ? 'claw' : 'slash';
+      const effectType = 'slash';
       battle.effects.push({
         x: unitTarget.x, y: unitTarget.y - 20,
         type: effectType, timer: 0.4, maxTimer: 0.4,
         flip: this.side === 'enemy',
       });
+    }
+
+    // ── blink: 전투 시작 시 단 한 번 적 진영 맨 뒤로 순간이동 ──
+    if (this.ability === 'blink' && !this._hasBlinked && unitTarget && !unitTarget.dead) {
+      const dir = this.side === 'player' ? 1 : -1;
+      const allEnemies = this.side === 'player' ? battle.enemyUnits : battle.playerUnits;
+      let backX = unitTarget.x;
+      for (const e of allEnemies) {
+        if (e.dead || e.phased) continue;
+        if (this.side === 'player' && e.x > backX) backX = e.x;
+        if (this.side === 'enemy'  && e.x < backX) backX = e.x;
+      }
+      const landX = backX + dir * 28;
+      battle.effects.push({ x: this.x, y: this.y - 30, type: 'blink_out', timer: 0.5, maxTimer: 0.5 });
+      this.x = landX;
+      battle.effects.push({ x: this.x, y: this.y - 30, type: 'blink_in', timer: 0.5, maxTimer: 0.5 });
+      this._hasBlinked = true;
+      const nearest = allEnemies
+        .filter(e => !e.dead && !e.phased)
+        .sort((a, b) => Math.abs(this.x - a.x) - Math.abs(this.x - b.x))[0];
+      if (nearest) {
+        applyHit(nearest);
+        battle.effects.push({ x: nearest.x, y: nearest.y - 20, type: 'slash', timer: 0.4, maxTimer: 0.4, flip: this.side === 'enemy' });
+      }
+      return;
+    }
+
+    // ── blink: 순간이동 완료 후 근접 공격 ──
+    if (this.ability === 'blink' && this._hasBlinked && unitTarget && !unitTarget.dead) {
+      applyHit(unitTarget);
+      battle.effects.push({ x: unitTarget.x, y: unitTarget.y - 20, type: 'slash', timer: 0.4, maxTimer: 0.4, flip: this.side === 'enemy' });
+      return;
     }
 
     if (isRanged) {

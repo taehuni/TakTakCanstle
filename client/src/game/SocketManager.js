@@ -1,6 +1,6 @@
 import { io } from 'socket.io-client';
 
-const SERVER = 'http://localhost:3001';
+const SERVER = import.meta.env.PROD ? '' : (import.meta.env.VITE_SERVER_URL || 'http://localhost:3001');
 
 export class SocketManager {
   constructor() {

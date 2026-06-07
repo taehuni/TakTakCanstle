@@ -250,7 +250,7 @@ function UnitRoster({ army, playerUnits, playerBuildings, isBattle }) {
     ? [
         ...playerUnits.map(u => {
           const def = UNIT_DEFS[u.unitId];
-          return { key: `u${u.unitId}`, unitId: u.unitId, hp: u.hp, maxHp: u.maxHp || def?.maxHp || 1 };
+          return { key: `u${u.uid ?? u.unitId}`, unitId: u.unitId, hp: u.hp, maxHp: u.maxHp || def?.maxHp || 1 };
         }),
         ...playerBuildings.map((b, i) => ({
           key: `b${i}`, buildingId: b.buildingId, hp: b.hp, maxHp: b.maxHp || 400,
@@ -654,7 +654,7 @@ export default function GameScreen({ onEnd, multiInfo }) {
               ref={inputRef}
               value={input}
               onChange={e => setInput(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter') submit(); }}
+              onKeyDown={e => { if (e.key === 'Enter' && !e.repeat) submit(); }}
               onCompositionStart={() => { composingRef.current = true; }}
               onCompositionEnd={() => { composingRef.current = false; }}
               style={S.input}

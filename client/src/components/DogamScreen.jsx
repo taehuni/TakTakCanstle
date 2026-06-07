@@ -9,7 +9,7 @@ const HIDDEN_UNITS = BUILD_WORDS.filter(w =>  w.hidden && w.type === 'unit');
 
 // ── 번역 테이블 ────────────────────────────────────────────────────────────
 const ROLE_KO    = { infantry:'보병', ranged:'원거리', heavy:'중장보병', mage:'마법사', spirit:'정령', explosive:'폭발물', siege:'공성' };
-const FACTION_KO = { human:'인간', undead:'언데드', goblin:'고블린', orc:'오크', feline:'정령', beast:'야수', dragon:'용족' };
+const FACTION_KO = { human:'인간', undead:'언데드', orc:'오크', beast:'야수' };
 const DMG_KO     = { physical:'물리', pierce:'관통', magical:'마법', holy:'신성', fire:'화염', curse:'저주', true:'고정' };
 
 // ── 상성 힌트 (combat.js 기반) ──────────────────────────────────────────────
@@ -48,6 +48,7 @@ function abilityDesc(ability, data = {}) {
     case 'heal_aura':   return `주변 ${data.range||120}px 아군 초당 ${data.healRate||5} HP 회복`;
     case 'charm_aura':  return `주변 ${data.range||90}px 인간 유닛 행동 불가`;
     case 'regen':       return `매초 ${data.regenRate||3} HP 자동 회복`;
+    case 'blink':       return '전투 시작 후 첫 공격 시 적 진영 후방으로 순간이동 · 이후 가장 가까운 적을 추격하며 근접 공격';
     default:            return null;
   }
 }
@@ -56,7 +57,7 @@ const ABILITY_NAME = {
   charge:'돌격', double_spawn:'군집 소환', triple_spawn:'군집 소환',
   phase:'유체화', revive:'부활', life_steal:'흡혈',
   aura:'전투 오라', kamikaze:'자폭', rage:'분노',
-  curse:'저주', heal_aura:'치유 오라', charm_aura:'매혹 오라', regen:'재생',
+  curse:'저주', heal_aura:'치유 오라', charm_aura:'매혹 오라', regen:'재생', blink:'순간이동',
 };
 
 // ── 유닛 스프라이트 ────────────────────────────────────────────────────────

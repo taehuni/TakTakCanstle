@@ -307,8 +307,10 @@ export class Renderer {
   drawMiniUnit(unitId, side, x, y, silhouette = false) {
     const def = UNIT_DEFS[unitId];
     if (!def) return;
-    const w = def.size * 2, h = def.size * 2;
-    const bx = x - w / 2, by = y - h;
+    const w   = def.animFrames?.renderW ?? (def.size * (def.scale || 3));
+    const h   = def.animFrames?.renderH ?? (def.size * (def.scale || 3));
+    const yOff = def.yOffset || 0;
+    const bx  = x - w / 2, by = y - h + yOff;
     const color = side === 'player' ? def.color : def.enemyColor;
     const ctx = this.ctx;
     const flip = side === 'enemy';
@@ -648,14 +650,14 @@ export class Renderer {
       const dive = Math.sin(t * Math.PI);           // 0→1→0
       yOff       = yOff * (1 - dive);               // -44→0→-44
       // 기울기: 플레이어는 오른쪽(전방), 적은 왼쪽
-      diveAngle  = (unit.side === 'player' ? 1 : -1) * dive * 0.5;
+      diveAngle  = (unit.facingLeft ? -1 : 1) * dive * 0.5;
     }
 
     const x = unit.x - w / 2;
     const y = unit.y - h + (unit.walkBob || 0) + yOff;
     const color = unit.side === 'player' ? unit.color : unit.enemyColor;
 
-    const flip = unit.side === 'enemy';
+    const flip = unit.facingLeft ?? (unit.side === 'enemy');
 
     // 공중 유닛 그림자 (다이브 중엔 그림자 진해짐)
     if (unit.traits?.includes('flying')) {
@@ -723,6 +725,14 @@ export class Renderer {
 
     // 무기는 항상 캐릭터 위에 그림
     this.drawWeapon(unit.weaponSheet, unit.weaponRow, unit.weaponCol, x, y, w, h, flip);
+
+    // 팀 아웃라인
+    ctx.save();
+    ctx.strokeStyle = unit.side === 'player' ? '#60a5fa' : '#f87171';
+    ctx.lineWidth = 2.5;
+    ctx.globalAlpha = 1.0;
+    ctx.strokeRect(x - 1, y - 1, w + 2, h + 2);
+    ctx.restore();
 
     // HP 바
     if (unit.hp < unit.maxHp) {
@@ -1043,15 +1053,16 @@ export class Renderer {
       }
 
     } else if (e.type === 'heal') {
-      // 힐: 금색 불꽃 스프라이트
+      // 힐: 초록 풀 솟아오름 (8.png)
       if (this.em?.loaded && e.maxTimer) {
         const progress = Math.min(1, 1 - e.timer / e.maxTimer);
-        const s = this.em.getStrip('heal_flame', progress);
+        const s = this.em.getStrip('green_ground', progress);
         if (s) {
-          ctx.save(); ctx.imageSmoothingEnabled = false;
-          ctx.globalAlpha = Math.max(0, e.timer / e.maxTimer);
-          const rise = (1 - Math.max(0, e.timer / e.maxTimer)) * 14;
-          ctx.drawImage(s.img, s.sx, s.sy, s.sw, s.sh, e.x - 20, e.y - 40 - rise, 40, 40);
+          ctx.save(); ctx.imageSmoothingEnabled = true;
+          const fade = progress < 0.3 ? progress / 0.3 : Math.max(0, (1 - progress) / 0.7);
+          ctx.globalAlpha = Math.min(1, fade * 1.4);
+          const rise = progress * 20;
+          ctx.drawImage(s.img, s.sx, s.sy, s.sw, s.sh, e.x - 48, e.y - 56 - rise, 96, 56);
           ctx.restore(); return;
         }
       }
@@ -1171,6 +1182,23 @@ export class Renderer {
         return;
       }
       // fallback: 슬래시로
+    } else if (e.type === 'blink_out' || e.type === 'blink_in') {
+      if (this.em?.loaded && e.maxTimer) {
+        const progress = Math.min(1, 1 - e.timer / e.maxTimer);
+        const frame = this.em.getStrip('dark_blob', progress);
+        if (frame) {
+          const sz = 80;
+          ctx.save();
+          ctx.globalAlpha = a;
+          ctx.imageSmoothingEnabled = true;
+          ctx.drawImage(frame.img, frame.sx, frame.sy, frame.sw, frame.sh,
+            e.x - sz / 2, e.y - sz / 2, sz, sz);
+          ctx.restore();
+          return;
+        }
+      }
+      return;
+
     } else if (e.type === 'slash') {
       if (this.em?.loaded && e.maxTimer) {
         const progress = Math.min(1, 1 - e.timer / e.maxTimer);

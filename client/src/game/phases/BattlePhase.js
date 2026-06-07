@@ -98,7 +98,7 @@ export class BattlePhase {
     }
 
     // ── aura 버프 매 프레임 초기화 후 재적용 ──────
-    [...this.playerUnits, ...this.enemyUnits].forEach(u => { u.speedBuff = 1; u.atkBuff = 1; });
+    [...this.playerUnits, ...this.enemyUnits].forEach(u => { u.speedBuff = 1; u.atkBuff = 1; u._healCount = 0; });
     for (const u of [...this.playerUnits, ...this.enemyUnits]) {
       if (u.dead) continue;
 
@@ -119,7 +119,8 @@ export class BattlePhase {
         u._healFxTimer = (u._healFxTimer || 0) - dt;
         for (const ally of allies) {
           if (!ally.dead && ally !== u && Math.abs(ally.x - u.x) <= range && ally.hp < ally.maxHp) {
-            ally.hp = Math.min(ally.maxHp, ally.hp + healRate * dt);
+            ally._healCount = (ally._healCount || 0) + 1;
+            ally.hp = Math.min(ally.maxHp, ally.hp + (healRate / ally._healCount) * dt);
             if (u._healFxTimer <= 0) {
               this.effects.push(mkFx(ally.x, ally.y - 30, 'heal', 0.7));
               u._healFxTimer = 1.2;

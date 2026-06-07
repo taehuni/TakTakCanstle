@@ -18,7 +18,7 @@ export const UNIT_DEFS = {
     sheet: 'tiny-dungeon', tileRow: 7, tileCol: 3,
     weaponSheet: 'tiny-dungeon', weaponRow: 8, weaponCol: 10,
     color: '#4a9eff', enemyColor: '#ff5555',
-    size: 16, scale: 3,
+    size: 16, scale: 2.5,
   },
 
   archer: {
@@ -30,7 +30,7 @@ export const UNIT_DEFS = {
     sheet: 'tiny-dungeon', tileRow: 7, tileCol: 1,
     weaponSheet: 'tiny-addon', weaponRow: 2, weaponCol: 6,
     color: '#4dff91', enemyColor: '#ff7070',
-    size: 16, scale: 3,
+    size: 16, scale: 2.5,
   },
 
   knight: {
@@ -42,7 +42,7 @@ export const UNIT_DEFS = {
     sheet: 'tiny-dungeon', tileRow: 8, tileCol: 0,
     weaponSheet: 'tiny-addon', weaponRow: 13, weaponCol: 10,
     color: '#ffe566', enemyColor: '#ff8866',
-    size: 16, scale: 3,
+    size: 16, scale: 2.5,
   },
 
   wizard: {
@@ -54,7 +54,7 @@ export const UNIT_DEFS = {
     sheet: 'tiny-dungeon', tileRow: 7, tileCol: 0,
     weaponSheet: 'tiny-dungeon', weaponRow: 10, weaponCol: 10,
     color: '#c084fc', enemyColor: '#fc84c0',
-    size: 16, scale: 3,
+    size: 16, scale: 2.5,
   },
 
   // ══════════════════════════════════════════════
@@ -71,7 +71,7 @@ export const UNIT_DEFS = {
     sheet: 'tiny-addon', tileRow: 10, tileCol: 2,
     weaponSheet: null, weaponRow: null, weaponCol: null,
     color: '#e2e2e2', enemyColor: '#c0a0a0',
-    size: 16, scale: 3,
+    size: 16, scale: 2.5,
   },
 
   ghost: {
@@ -84,7 +84,7 @@ export const UNIT_DEFS = {
     sheet: 'tiny-dungeon', tileRow: 10, tileCol: 1,
     weaponSheet: null, weaponRow: null, weaponCol: null,
     color: '#a5f3fc', enemyColor: '#f0abfc',
-    size: 16, scale: 3,
+    size: 16, scale: 2.5,
   },
 
   zombie: {
@@ -97,7 +97,7 @@ export const UNIT_DEFS = {
     sheet: 'tiny-creatures', tileRow: 0, tileCol: 0,
     weaponSheet: null, weaponRow: null, weaponCol: null,
     color: '#86efac', enemyColor: '#fca5a5',
-    size: 16, scale: 3,
+    size: 16, scale: 2.5,
   },
 
   vampire: {
@@ -110,7 +110,7 @@ export const UNIT_DEFS = {
     sheet: 'tiny-creatures', tileRow: 0, tileCol: 2,
     weaponSheet: null, weaponRow: null, weaponCol: null,
     color: '#f472b6', enemyColor: '#fb7185',
-    size: 16, scale: 3,
+    size: 16, scale: 2.5,
   },
 
   // ══════════════════════════════════════════════
@@ -121,26 +121,26 @@ export const UNIT_DEFS = {
     id: 'goblin', name: '고블린',
     hp: 60, maxHp: 60,
     attack: 12, speed: 55, range: 24, cooldown: 1.3,
-    def: 3, mdef: 3, dmgType: 'physical', role: 'infantry', faction: 'goblin', traits: [],
+    def: 3, mdef: 3, dmgType: 'physical', role: 'infantry', faction: 'orc', traits: [],
     ability: 'aura',                   // 150px 내 아군 SPD+30%, ATK+20%
     abilityData: { range: 150, speedMult: 1.3, atkMult: 1.2 },
     sheet: 'tiny-addon', tileRow: 9, tileCol: 2,
     weaponSheet: null, weaponRow: null, weaponCol: null,
     color: '#a3e635', enemyColor: '#fbbf24',
-    size: 16, scale: 3,
+    size: 16, scale: 2.5,
   },
 
   bomber: {
     id: 'bomber', name: '폭탄병',
     hp: 30, maxHp: 30,
-    attack: 50, speed: 60, range: 24, cooldown: 99,
-    def: 0, mdef: 0, dmgType: 'fire', role: 'explosive', faction: 'goblin', traits: ['swarm'],
+    attack: 32, speed: 60, range: 24, cooldown: 99,
+    def: 0, mdef: 0, dmgType: 'fire', role: 'explosive', faction: 'orc', traits: ['swarm'],
     ability: 'kamikaze',               // 적 사정거리 내 진입 시 자폭 AoE
-    abilityData: { triggerRange: 50, aoeRange: 90 },
+    abilityData: { triggerRange: 40, aoeRange: 60, maxTargets: 2 },
     sheet: 'tiny-creatures', tileRow: 0, tileCol: 3,
     weaponSheet: null, weaponRow: null, weaponCol: null,
     color: '#fb923c', enemyColor: '#f97316',
-    size: 16, scale: 3,
+    size: 16, scale: 2.5,
   },
 
   // ══════════════════════════════════════════════
@@ -157,7 +157,7 @@ export const UNIT_DEFS = {
     sheet: 'tiny-addon', tileRow: 9, tileCol: 5,
     weaponSheet: null, weaponRow: null, weaponCol: null,
     color: '#4ade80', enemyColor: '#fb923c',
-    size: 16, scale: 3,
+    size: 16, scale: 2.5,
   },
 
   shaman: {
@@ -170,7 +170,7 @@ export const UNIT_DEFS = {
     sheet: 'tiny-dungeon', tileRow: 9, tileCol: 3,
     weaponSheet: null, weaponRow: null, weaponCol: null,
     color: '#818cf8', enemyColor: '#c084fc',
-    size: 16, scale: 3,
+    size: 16, scale: 2.5,
   },
 
   // ══════════════════════════════════════════════
@@ -186,19 +186,19 @@ export const UNIT_DEFS = {
     sheet: 'tiny-addon', tileRow: 4, tileCol: 3,
     weaponSheet: null, weaponRow: null, weaponCol: null,
     color: '#fde68a', enemyColor: '#fca5a5',
-    size: 16, scale: 3,
+    size: 16, scale: 2.5,
   },
 
   rogue: {
     id: 'rogue', name: '도적',
-    hp: 32, maxHp: 32,
-    attack: 13, speed: 95, range: 24, cooldown: 1.0,
+    hp: 28, maxHp: 28,
+    attack: 30, speed: 55, range: 220, cooldown: 2.0,
     def: 1, mdef: 0, dmgType: 'pierce', role: 'infantry', faction: 'human', traits: [],
-    ability: 'charge', abilityData: { mult: 1.8 },
+    ability: 'blink', abilityData: {},
     sheet: 'tiny-addon', tileRow: 6, tileCol: 2,
     weaponSheet: null, weaponRow: null, weaponCol: null,
     color: '#94a3b8', enemyColor: '#f87171',
-    size: 16, scale: 3,
+    size: 16, scale: 2.5,
   },
 
   crossbowman: {
@@ -210,7 +210,7 @@ export const UNIT_DEFS = {
     sheet: 'tiny-addon', tileRow: 4, tileCol: 4,
     weaponSheet: 'tiny-addon', weaponRow: 13, weaponCol: 4,
     color: '#7dd3fc', enemyColor: '#fca5a5',
-    size: 16, scale: 3,
+    size: 16, scale: 2.5,
   },
 
   // ══════════════════════════════════════════════
@@ -226,7 +226,7 @@ export const UNIT_DEFS = {
     sheet: 'tiny-addon', tileRow: 11, tileCol: 11,
     weaponSheet: 'tiny-dungeon', weaponRow: 10, weaponCol: 10,
     color: '#c4b5fd', enemyColor: '#f0abfc',
-    size: 16, scale: 3,
+    size: 16, scale: 2.5,
   },
 
   death_knight: {
@@ -239,7 +239,7 @@ export const UNIT_DEFS = {
     sheet: 'tiny-addon', tileRow: 11, tileCol: 10,
     weaponSheet: 'tiny-addon', weaponRow: 13, weaponCol: 10,
     color: '#6366f1', enemyColor: '#a78bfa',
-    size: 16, scale: 3,
+    size: 16, scale: 2.5,
   },
 
   bat: {
@@ -249,11 +249,11 @@ export const UNIT_DEFS = {
     def: 0, mdef: 0, dmgType: 'physical', role: 'infantry', faction: 'undead', traits: ['undead', 'swarm', 'flying'],
     ability: 'triple_spawn',
     abilityData: {},
-    yOffset: -36,
+    yOffset: -30,
     sheet: 'tiny-addon', tileRow: 8, tileCol: 9,
     weaponSheet: null, weaponRow: null, weaponCol: null,
     color: '#a78bfa', enemyColor: '#c084fc',
-    size: 16, scale: 3,
+    size: 16, scale: 2.5,
   },
 
   // ══════════════════════════════════════════════
@@ -270,7 +270,7 @@ export const UNIT_DEFS = {
     sheet: 'tiny-addon', tileRow: 8, tileCol: 0,
     weaponSheet: null, weaponRow: null, weaponCol: null,
     color: '#86efac', enemyColor: '#fde68a',
-    size: 16, scale: 3,
+    size: 16, scale: 2.5,
   },
 
   troll: {
@@ -283,7 +283,7 @@ export const UNIT_DEFS = {
     sheet: 'tiny-dungeon', tileRow: 9, tileCol: 1,
     weaponSheet: null, weaponRow: null, weaponCol: null,
     color: '#4ade80', enemyColor: '#86efac',
-    size: 16, scale: 3,
+    size: 16, scale: 2.5,
   },
 
   // ══════════════════════════════════════════════
@@ -300,7 +300,7 @@ export const UNIT_DEFS = {
     sheet: 'tiny-dungeon', tileRow: 9, tileCol: 1,
     weaponSheet: null, weaponRow: null, weaponCol: null,
     color: '#f97316', enemyColor: '#fb923c',
-    size: 16, scale: 3,
+    size: 16, scale: 2.5,
   },
 
   warchief: {
@@ -313,7 +313,7 @@ export const UNIT_DEFS = {
     sheet: 'tiny-creatures', tileRow: 1, tileCol: 1,
     weaponSheet: null, weaponRow: null, weaponCol: null,
     color: '#22c55e', enemyColor: '#4ade80',
-    size: 16, scale: 3,
+    size: 16, scale: 2.5,
   },
 
   // ══════════════════════════════════════════════
@@ -329,7 +329,7 @@ export const UNIT_DEFS = {
     sheet: 'tiny-dungeon', tileRow: 7, tileCol: 2,
     weaponSheet: 'tiny-dungeon', weaponRow: 10, weaponCol: 10,
     color: '#fef9c3', enemyColor: '#fca5a5',
-    size: 16, scale: 3,
+    size: 16, scale: 2.5,
   },
 
   // ══════════════════════════════════════════════
@@ -340,13 +340,13 @@ export const UNIT_DEFS = {
     id: 'cat', name: '고양이',
     hp: 28, maxHp: 28,
     attack: 4, speed: 80, range: 28, cooldown: 2.0,
-    def: 0, mdef: 4, dmgType: 'magical', role: 'spirit', faction: 'feline', traits: [],
+    def: 0, mdef: 4, dmgType: 'magical', role: 'spirit', faction: 'beast', traits: [],
     ability: 'charm_aura',
     abilityData: { range: 90 },
     sheet: 'tiny-addon', tileRow: 8, tileCol: 4,
     weaponSheet: null, weaponRow: null, weaponCol: null,
     color: '#f9a8d4', enemyColor: '#f472b6',
-    size: 16, scale: 3,
+    size: 16, scale: 2.5,
   },
 
   // ══════════════════════════════════════════════
@@ -361,7 +361,7 @@ export const UNIT_DEFS = {
     sheet: 'tiny-creatures', tileRow: 9, tileCol: 3,
     weaponSheet: null, weaponRow: null, weaponCol: null,
     color: '#94a3b8', enemyColor: '#cbd5e1',
-    size: 16, scale: 3,
+    size: 16, scale: 2.5,
   },
 
   bear: {
@@ -374,7 +374,7 @@ export const UNIT_DEFS = {
     sheet: 'tiny-creatures', tileRow: 16, tileCol: 3,
     weaponSheet: null, weaponRow: null, weaponCol: null,
     color: '#a16207', enemyColor: '#ca8a04',
-    size: 16, scale: 3,
+    size: 16, scale: 2.5,
   },
 
   // ══════════════════════════════════════════════
@@ -389,7 +389,7 @@ export const UNIT_DEFS = {
     sheet: 'tiny-creatures', tileRow: 13, tileCol: 4,
     weaponSheet: null, weaponRow: null, weaponCol: null,
     color: '#fde047', enemyColor: '#fb923c',
-    size: 16, scale: 3,
+    size: 16, scale: 2.5,
     yOffset: -44,
   },
 
@@ -399,15 +399,15 @@ export const UNIT_DEFS = {
 
   dragon: {
     id: 'dragon', name: '용',
-    hp: 150, maxHp: 150,
-    attack: 32, speed: 38, range: 180, cooldown: 2.8,
-    def: 8, mdef: 6, dmgType: 'fire', role: 'mage', faction: 'dragon', traits: ['flying'],
+    hp: 110, maxHp: 110,
+    attack: 24, speed: 35, range: 160, cooldown: 3.2,
+    def: 6, mdef: 5, dmgType: 'fire', role: 'mage', faction: 'beast', traits: ['flying'],
     ability: 'rage',
-    abilityData: { threshold: 0.4, atkMult: 2.0, spdMult: 1.3 },
+    abilityData: { threshold: 0.35, atkMult: 1.8, spdMult: 1.2 },
     sheet: 'tiny-creatures', tileRow: 3, tileCol: 0, tileColRange: [0, 1, 2, 3, 4],
     weaponSheet: null, weaponRow: null, weaponCol: null,
     color: '#fb923c', enemyColor: '#f87171',
-    size: 16, scale: 3,
+    size: 16, scale: 2.5,
     yOffset: -44,
   },
 
